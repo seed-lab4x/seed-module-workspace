@@ -1,0 +1,35 @@
+# code: language=ansible
+
+workspace:
+  package:
+    - sshpass
+    - rsync
+    - git
+  pip:
+    - jsondiff==2.0.0
+    - jmespath==1.0.1
+    # bug for https://github.com/yaml/pyyaml/issues/724
+    - PyYAML==5.3.1
+    - lxml==4.9.2
+    # bug for https://github.com/docker/docker-py/issues/3113
+    - requests==2.28.1
+
+ssh:
+  name: none
+  group: none
+
+system:
+
+docker:
+  package:
+    - sshpass
+    - rsync
+    - git
+  pip:
+    - jsondiff==2.0.0
+    - jmespath==1.0.1
+    # bug for https://github.com/yaml/pyyaml/issues/724
+    - PyYAML==5.3.1
+    - lxml==4.9.2
+    # bug for https://github.com/docker/docker-py/issues/3113
+    - requests==2.28.1
