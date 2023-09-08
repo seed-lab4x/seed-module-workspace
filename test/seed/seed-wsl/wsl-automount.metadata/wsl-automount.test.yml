@@ -1,0 +1,25 @@
+#!/usr/bin/env -S ansible-playbook -K
+# code: language=ansible
+---
+
+- name: metadata
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+  hosts: localhost
+  become: true
+  gather_facts: false
+  tasks:
+
+    - name: create file
+      ansible.builtin.file:
+        path: /etc/wsl.conf
+        mode: u=rw,g=rw,o=rw
+        state: touch
+
+    - name: change automount.options
+      community.general.ini_file:
+        path: /etc/wsl.conf
+        backup: yes
+        section: automount
+        option: options
+        value: "metadata,umask=022,fmask=111"
