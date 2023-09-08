@@ -1,0 +1,17 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -k -i ${PWD}/../../test@local/2ssh/ansible-inventories
+# code: language=ansible
+---
+
+- name: test|remote
+  vars:
+    ansible_ssh_extra_args: '-o StrictHostKeyChecking=no'
+  hosts: ssh
+  gather_facts: false
+  tasks:
+
+    - name: 0|approve ssh
+      include_tasks: seed-ssh.test.yml
+      vars:
+        ssh:
+          dir: "{{ playbook_dir }}/build"
+          name: "test-ssh-approve"

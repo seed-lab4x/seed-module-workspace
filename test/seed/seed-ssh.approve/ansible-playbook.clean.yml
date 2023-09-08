@@ -1,0 +1,47 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/2ssh/ansible-inventories
+# code: language=ansible
+---
+
+- name: clean|local
+  hosts: localhost
+  connection: local
+  tasks:
+
+    - name: clean|result ssh-server
+      loop: "{{ groups['ssh'] }}"
+      loop_control:
+        loop_var: host_name
+      community.docker.docker_container_exec:
+        container: "test-ssh-approve-{{ host_name }}"
+        command: "cat /config/.ssh/authorized_keys"
+      register: results_authorized
+      until: results_authorized is succeeded
+
+    - name: clean|assert results
+      vars:
+        pub_path: "{{ playbook_dir }}/build/test-ssh-approve/id_rsa.pub"
+        pub_content: "{{ lookup('file', pub_path) }}"
+      loop: "{{ results_authorized.results }}"
+      ansible.builtin.assert:
+        that:
+          - item.stdout_lines[-1] | trim == pub_content
+
+    - name: clean|clean ssh-server
+      loop: "{{ groups['ssh'] }}"
+      loop_control:
+        loop_var: host_name
+      community.docker.docker_container:
+        state: absent
+        name: "test-ssh-approve-{{ host_name }}"
+      register: server_clean
+      until: server_clean is succeeded
+
+    - name: clean|restore known_hosts
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/build/known_hosts.bak"
+        dest: "~/.ssh/known_hosts"
+
+    - name: clean|clean build
+      ansible.builtin.file:
+        state: absent
+        path: "{{ playbook_dir }}/build"
