@@ -1,0 +1,83 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/4linux/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: all
+  tasks:
+
+    - name: playbook var|index loop|push files
+      include_tasks: seed-files.test.yml
+      vars:
+        files:
+          - src: "{{ playbook_dir }}/file/file"
+            dest: "{{ workspace.remote }}/test-from-playbook_0/"
+          - src: "{{ playbook_dir }}/file/dir"
+            dest: "{{ workspace.remote }}/test-from-playbook_1/"
+          - dest: "{{ workspace.remote }}/test-from-playbook_2/dir.mkdir"
+
+    - name: playbook var|index loop|assert files
+      ansible.builtin.assert:
+        that:
+          - test_include_count | int == 3
+          - test_append_result | length == 3
+          - test_append_result[0].index == '0'
+          - test_append_result[1].index == '1'
+          - test_append_result[2].index == '2'
+
+    - name: playbook var|index loop|clean test
+      ansible.builtin.set_fact:
+        test_include_count: 0
+        test_append_result: []
+
+
+    - name: playbook var|value loop|push files
+      include_tasks: seed-files.test.yml
+      vars:
+        files_share:
+          mode: value
+          group: linux-34
+        files:
+          - once: false
+            any: false
+            src: "{{ playbook_dir }}/file/file"
+            dest: "{{ workspace.remote }}/test-from-playbook_3/"
+          - once: false
+            any: true
+            src: "{{ playbook_dir }}/file/dir"
+            dest: "{{ playbook_dir }}/test-from-playbook_4/"
+          - once: true
+            any: true
+            dest: "{{ playbook_dir }}/test-from-playbook_5/dir.mkdir"
+
+    - name: playbook var|value loop|assert files
+      ansible.builtin.assert:
+        that:
+          - test_include_count | int == (2 + 1 + 1)
+
+    - name: playbook var|value loop|assert files host node3
+      when: inventory_hostname == 'node3'
+      ansible.builtin.assert:
+        that:
+          - test_append_result | length == 3
+          - test_append_result[0].share.any == false
+          - test_append_result[0].param.dest is contains('playbook_3')
+          - test_append_result[1].share.any == true
+          - test_append_result[1].param.dest is contains('playbook_4')
+          - test_append_result[2].share.any == true
+          - test_append_result[2].param.dest is contains('playbook_5')
+
+    - name: playbook var|value loop|assert files host node4
+      when: inventory_hostname == 'node4'
+      ansible.builtin.assert:
+        that:
+          - test_append_result | length == 2
+          - test_append_result[0].share.any == true
+          - test_append_result[0].param.dest is contains('playbook_4')
+          - test_append_result[1].share.any == false
+          - test_append_result[1].param.dest is contains('playbook_3')
+
+    - name: playbook var|value loop|clean test
+      ansible.builtin.set_fact:
+        test_include_count: 0
+        test_append_result: []
