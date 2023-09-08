@@ -1,0 +1,116 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/4linux/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: all
+  tasks:
+
+    - name: playbook var|all host|push file
+      include_tasks: seed-file.test.yml
+      vars:
+        file:
+          src: "{{ playbook_dir }}/file/file"
+          dest: "{{ workspace.remote }}/test-from-playbook_0/"
+
+    - name: playbook var|all host|stat file
+      ansible.builtin.stat:
+        path: "{{ workspace.remote }}/test-from-playbook_0/file"
+      register: file_stat
+
+    - name: playbook var|all host|assert file
+      ansible.builtin.assert:
+        that:
+          - file_stat.stat.exists
+          - file_stat.stat.path | basename == 'file'
+          - not file_stat.stat.isdir
+          - file_stat.stat.size == 9
+
+    - name: playbook var|all host|clean file
+      ansible.builtin.file:
+        state: absent
+        path: "{{ workspace.remote }}/test-from-playbook_0"
+
+
+    - name: playbook var|all host|push dir
+      include_tasks: seed-file.test.yml
+      vars:
+        file:
+          src: "{{ playbook_dir }}/file/dir"
+          dest: "{{ workspace.remote }}/test-from-playbook_1/"
+
+    - name: playbook var|all host|stat dir
+      ansible.builtin.stat:
+        path: "{{ workspace.remote }}/test-from-playbook_1/dir"
+      register: dir_stat
+
+    - name: playbook var|all host|assert dir
+      ansible.builtin.assert:
+        that:
+          - dir_stat.stat.exists
+          - dir_stat.stat.path | basename == 'dir'
+          - dir_stat.stat.isdir
+
+    - name: playbook var|all host|clean dir
+      ansible.builtin.file:
+        state: absent
+        path: "{{ workspace.remote }}/test-from-playbook_1"
+
+
+    - name: playbook var|all host|push mkdir
+      include_tasks: seed-file.test.yml
+      vars:
+        file:
+          dest: "{{ workspace.remote }}/test-from-playbook_2/dir.mkdir"
+
+    - name: playbook var|all host|stat mkdir
+      ansible.builtin.stat:
+        path: "{{ workspace.remote }}/test-from-playbook_2/dir.mkdir"
+      register: dir_stat
+
+    - name: playbook var|all host|assert mkdir
+      ansible.builtin.assert:
+        that:
+          - dir_stat.stat.exists
+          - dir_stat.stat.path | basename == 'dir.mkdir'
+          - dir_stat.stat.isdir
+
+    - name: playbook var|all host|clean mkdir
+      ansible.builtin.file:
+        state: absent
+        path: "{{ workspace.remote }}/test-from-playbook_2"
+
+
+    - name: playbook var|any|push file
+      include_tasks: seed-file.test.yml
+      vars:
+        file_share:
+          any: true
+          group: linux-34
+        file:
+          src: "{{ playbook_dir }}/file/{{ 'file' if(inventory_hostname == 'node3') else 'none' }}"
+          dest: "{{ workspace.remote }}/test-from-playbook_3/"
+
+    - name: playbook var|any|stat file
+      ansible.builtin.stat:
+        path: "{{ workspace.remote }}/test-from-playbook_3/file"
+      register: file_stat
+
+    - name: playbook var|any|assert file host node3
+      when: inventory_hostname == 'node3'
+      ansible.builtin.assert:
+        that:
+          - file_stat.stat.exists
+          - file_stat.stat.path | basename == 'file'
+          - not file_stat.stat.isdir
+
+    - name: playbook var|any|assert file host node4
+      when: inventory_hostname == 'node4'
+      ansible.builtin.assert:
+        that:
+          - not file_stat.stat.exists
+
+    - name: playbook var|any|clean file
+      ansible.builtin.file:
+        state: absent
+        path: "{{ workspace.remote }}/test-from-playbook_3"
