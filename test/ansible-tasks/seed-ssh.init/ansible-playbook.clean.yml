@@ -1,0 +1,39 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/2ssh/ansible-inventories
+# code: language=ansible
+---
+
+- name: clean|local
+  hosts: localhost
+  connection: local
+  tasks:
+
+    - name: clean|clean ssh-server
+      loop: "{{ groups['ssh'] }}"
+      loop_control:
+        loop_var: host_name
+      community.docker.docker_container:
+        state: absent
+        name: "test-ssh-init-{{ host_name }}"
+        keep_volumes: false
+      register: server_clean
+      until: server_clean is succeeded
+
+    - name: clean|restore known_hosts
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/build/known_hosts.bak"
+        dest: "~/.ssh/known_hosts"
+
+    - name: clean|restore config
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/build/config.bak"
+        dest: "~/.ssh/config"
+
+    - name: clean|clean build
+      ansible.builtin.file:
+        state: absent
+        path: "{{ playbook_dir }}/build"
+
+    - name: clean|clean ssh_dir
+      ansible.builtin.file:
+        state: absent
+        path: "{{ ssh_dir }}"

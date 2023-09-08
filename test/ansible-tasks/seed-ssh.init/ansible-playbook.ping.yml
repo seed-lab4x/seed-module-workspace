@@ -1,0 +1,26 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/2ssh/ansible-inventories
+# code: language=ansible
+---
+
+- name: ping|local
+  hosts: localhost
+  connection: local
+  tasks:
+
+    - name: ping ssh
+      ansible.builtin.shell:
+        cmd: "ansible -i {{ inventory_dir }} ssh -m ping"
+      async: 5
+      poll: 1
+      register: server_ping
+      ignore_errors: true
+
+    - name: ping succeeded
+      when: mode == 'succeeded'
+      ansible.builtin.assert:
+        that: server_ping is succeeded
+
+    - name: ping failed
+      when: mode == 'failed'
+      ansible.builtin.assert:
+        that: server_ping is failed
