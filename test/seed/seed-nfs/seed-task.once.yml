@@ -6,6 +6,8 @@
     redirect:
       - search: seed-nfs/nfs-mount.wait.yml
         replace: ../seed-nfs/nfs-mounts.wait/nfs-mount.wait.yml
+      - search: seed-nfs/nfs-mount.push.yml
+        replace: ../seed-nfs/nfs-mounts.push/nfs-mount.push.yml
   ansible.builtin.set_fact:
     _task_share:
       run_once: "{{ task_share.run_once }}"
