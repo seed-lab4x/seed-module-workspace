@@ -1,0 +1,28 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -K
+# code: language=ansible
+---
+
+- import_playbook: wsl-automount.test.yml
+
+- name: test
+  hosts: localhost
+  connection: local
+  tasks:
+
+    - name: 0|stat results
+      ansible.builtin.stat:
+        path: /etc/wsl.conf
+      register: results_keypair
+      until: results_keypair.stat.exists
+
+    - name: 0|searching result
+      loop:
+        - '[interop]'
+        - 'appendWindowsPath = false'
+      ansible.builtin.lineinfile:
+        path: /etc/wsl.conf
+        line: "{{ item }}"
+        state: present
+      check_mode: yes
+      register: results_config
+      failed_when: results_config is changed

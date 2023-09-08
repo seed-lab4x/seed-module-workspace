@@ -1,0 +1,25 @@
+#!/usr/bin/env -S ansible-playbook -K
+# code: language=ansible
+---
+
+- name: disable
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+  hosts: localhost
+  become: true
+  gather_facts: false
+  tasks:
+
+    - name: touch wsl.conf
+      ansible.builtin.file:
+        path: /etc/wsl.conf
+        mode: u=rw,g=rw,o=rw
+        state: touch
+
+    - name: false interop.appendWindowsPath
+      community.general.ini_file:
+        path: /etc/wsl.conf
+        backup: yes
+        section: interop
+        option: appendWindowsPath
+        value: "false"
