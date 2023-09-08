@@ -14,3 +14,17 @@ ssh:
     - 'ecdsa-sha2-nistp256'
     - 'ssh-ed25519'
     - 'ssh-rsa'
+
+docker:
+  package:
+    - sshpass
+    - rsync
+    - git
+  pip:
+    - jsondiff==2.0.0
+    - jmespath==1.0.1
+    # bug for https://github.com/yaml/pyyaml/issues/724
+    - PyYAML==5.3.1
+    - lxml==4.9.2
+    # bug for https://github.com/docker/docker-py/issues/3113
+    - requests==2.28.1

@@ -1,0 +1,46 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -K -i ${PWD}/../../test@local/2ssh/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: ssh
+  connection: local
+  tasks:
+
+    - name: inventory var|fact docker
+      include_tasks: seed-docker.test.yml
+
+    - name: inventory var|assert results
+      ansible.builtin.assert:
+        that:
+          - package_install.results | length == 3
+          - pip_install.results | length == 5
+
+
+    - name: playbook var|init docker
+      include_tasks: seed-docker.test.yml
+      vars:
+        docker:
+          package:
+            - python3-pip
+          pip:
+            - docker
+
+    - name: playbook var|assert results
+      ansible.builtin.assert:
+        that:
+          - package_install.results | length == 1
+          - pip_install.results | length == 1
+
+
+    - name: null var|fact docker
+      include_tasks: seed-docker.test.yml
+      vars:
+        # clear the facts generated in the previous step
+        docker: !!null
+
+    - name: null var|assert results
+      ansible.builtin.assert:
+        that:
+          - package_install.results | length == 2
+          - pip_install.results | length == 7
