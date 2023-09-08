@@ -1,3 +1,9 @@
 # code: language=ansible
 
 host_path: "{{ inventory_dir }}/../"
+
+workspace:
+  local: "{{ host_path }}/../../../"
+  # Simulate multiple host paths on localhost
+  remote: "{{ playbook_dir }}/build/{{ inventory_hostname }}"
+  unknow: "no change fact attribute defined by inventory {{ inventory_hostname }}"
