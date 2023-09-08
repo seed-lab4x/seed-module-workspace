@@ -28,3 +28,8 @@ docker:
     - lxml==4.9.2
     # bug for https://github.com/docker/docker-py/issues/3113
     - requests==2.28.1
+
+system:
+  # group: docker
+  # init_task: "{{ playbook_dir }}/../ansible-tasks/seed-docker.init.yml"
+  # init_var: docker
