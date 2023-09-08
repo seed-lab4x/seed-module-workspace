@@ -1,0 +1,19 @@
+{
+  "workspace": {
+    "name": "seed-module-workspace",
+    "url": "git@github.com:seed-lab4x/seed-module-workspace.git"
+  },
+  "seed": {
+    "path": "seed",
+    "customize": true
+  },
+  "config": {
+    "name": ".config",
+    "url": "../seed-module-config.git",
+    "path": ".config",
+    "branch": "main",
+    "customize": {
+      "prompt": true
+    }
+  }
+}
