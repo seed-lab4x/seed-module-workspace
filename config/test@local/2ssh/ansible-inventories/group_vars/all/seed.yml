@@ -1,1 +1,14 @@
 # code: language=ansible
+
+ssh:
+  # group: ssh
+  name: local-test-2ssh
+  dir: "{{ ssh_dir }}"
+  approve_task: "{{ playbook_dir }}/../seed-ssh.approve/seed-ssh.test.yml"
+  config_path: "{{ ssh_dir }}/config"
+  known_path: "{{ ssh_dir }}/known_hosts"
+  known_hash: true
+  known_scan:
+    - 'ecdsa-sha2-nistp256'
+    - 'ssh-ed25519'
+    - 'ssh-rsa'
