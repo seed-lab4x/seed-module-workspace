@@ -1,0 +1,57 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -K -i ${PWD}/../../test@local/localhost/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: localhost
+  connection: local
+  tasks:
+
+    - name: inventory var|init workspace
+      include_tasks: seed-workspace.test.yml
+
+    - name: inventory var|assert results
+      ansible.builtin.assert:
+        that:
+          - package_install.results | length == 3
+          - pip_install.results | length == 5
+          - requirements_stat.stat.exists
+
+
+    - name: playbook var|init workspace
+      include_tasks: seed-workspace.test.yml
+      vars:
+        workspace:
+          package:
+            - git
+          pip:
+            - stormssh
+          requirements: "{{ inventory_dir }}/../requirements.none"
+          role:
+            - geerlingguy.docker
+            - geerlingguy.pip
+          collection:
+            - community.docker
+            - community.general
+
+    - name: playbook var|assert results
+      ansible.builtin.assert:
+        that:
+          - package_install.results | length == 1
+          - pip_install.results | length == 1
+          - not requirements_stat.stat.exists
+          - galaxy_install.results | length == 4
+
+
+    - name: null var|init workspace
+      include_tasks: seed-workspace.test.yml
+      vars:
+        # clear the facts generated in the previous step
+        workspace: !!null
+
+    - name: null var|assert results
+      ansible.builtin.assert:
+        that:
+          - package_install.results | length == 4
+          - pip_install.results | length == 6
+          - requirements_stat.stat.exists
