@@ -1,0 +1,150 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -K -i ${PWD}/../../test@local/3nfs/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: nfs-client
+  tasks:
+
+    - name: playbook var|all host|push file temp mount
+      include_tasks: nfs-mount.test.yml
+      vars:
+        mount:
+          nfs:
+            src: "localhost:/"
+            opts: "vers=4,loud,rw,sync"
+          src: "{{ playbook_dir }}/file/file"
+          dest: "{{ inventory_hostname }}/test-from-playbook_0/file.temp"
+
+    - name: playbook var|all host|assert file temp mount
+      ansible.builtin.assert:
+        that:
+          - mount_temp.path is defined
+
+    - name: playbook var|all host|clean file temp mount
+      ansible.builtin.set_fact:
+        mount_temp: !!null
+        mount_nfs: !!null
+
+
+    - name: playbook var|all host|push file
+      include_tasks: nfs-mount.test.yml
+      vars:
+        mount:
+          nfs:
+            src: "localhost:/"
+            path: "{{ playbook_dir }}/build/data"
+            opts: "vers=4,loud,rw,sync"
+          src: "{{ playbook_dir }}/file/file"
+          dest: "{{ inventory_hostname }}/test-from-playbook_0/file.copy"
+
+    - name: playbook var|all host|stat file
+      ansible.builtin.stat:
+        path: "{{ playbook_dir }}/build/data/{{ inventory_hostname }}/test-from-playbook_0/file.copy"
+      register: file_stat
+
+    - name: playbook var|all host|assert file
+      ansible.builtin.assert:
+        that:
+          - mount_temp is skipped
+          - mount_nfs is succeeded
+          - mount_copy is succeeded
+          - file_stat.stat.exists
+          - file_stat.stat.path | basename == 'file.copy'
+          - not file_stat.stat.isdir
+          - file_stat.stat.size == 9
+
+
+    - name: playbook var|all host|push dir
+      include_tasks: nfs-mount.test.yml
+      vars:
+        mount:
+          nfs:
+            src: "localhost:/"
+            path: "{{ playbook_dir }}/build/data"
+            opts: "vers=4,loud,rw,sync"
+          src: "{{ playbook_dir }}/file/dir/"
+          dest: "{{ inventory_hostname }}/test-from-playbook_1/dir.copy"
+
+    - name: playbook var|all host|stat dir
+      ansible.builtin.stat:
+        path: "{{ playbook_dir }}/build/data/{{ inventory_hostname }}/test-from-playbook_1/dir.copy"
+      register: dir_stat
+
+    - name: playbook var|all host|assert dir
+      ansible.builtin.assert:
+        that:
+          - mount_temp is skipped
+          - mount_nfs is succeeded
+          - mount_copy is succeeded
+          - dir_stat.stat.exists
+          - dir_stat.stat.path | basename == 'dir.copy'
+          - dir_stat.stat.isdir
+
+
+    - name: playbook var|all host|push mkdir
+      include_tasks: nfs-mount.test.yml
+      vars:
+        mount:
+          nfs:
+            src: "localhost:/"
+            path: "{{ playbook_dir }}/build/data"
+            opts: "vers=4,loud,rw,sync"
+          dest: "{{ inventory_hostname }}/test-from-playbook_2/dir.mkdir"
+
+    - name: playbook var|all host|stat mkdir
+      ansible.builtin.stat:
+        path: "{{ playbook_dir }}/build/data/{{ inventory_hostname }}/test-from-playbook_2/dir.mkdir"
+      register: dir_stat
+
+    - name: playbook var|all host|assert mkdir
+      ansible.builtin.assert:
+        that:
+          - mount_temp is skipped
+          - mount_nfs is succeeded
+          - mount_copy is skipped
+          - dir_stat.stat.exists
+          - dir_stat.stat.path | basename == 'dir.mkdir'
+          - dir_stat.stat.isdir
+
+
+    - name: playbook var|any|push file
+      include_tasks: nfs-mount.test.yml
+      vars:
+        mount_share:
+          any: true
+          group: nfs-23
+        mount:
+          nfs:
+            src: "localhost:/{{ '' if(inventory_hostname == 'node3') else 'none' }}"
+            path: "{{ playbook_dir }}/build/{{ 'data' if(inventory_hostname == 'node3') else 'none' }}"
+            opts: "vers=4,loud,rw,sync"
+          src: "{{ playbook_dir }}/file/file"
+          dest: "{{ inventory_hostname }}/test-from-playbook_3/"
+
+    - name: playbook var|any|stat file
+      ansible.builtin.stat:
+        path: "{{ playbook_dir }}/build/data/{{ inventory_hostname }}/test-from-playbook_3/file"
+      register: file_stat
+
+    - name: playbook var|any|assert file host node2
+      when: inventory_hostname == 'node2'
+      ansible.builtin.assert:
+        that:
+          - mount_nfs is failed
+          - not file_stat.stat.exists
+
+    - name: playbook var|any|assert nfs host node3
+      when: inventory_hostname == 'node3'
+      ansible.builtin.assert:
+        that:
+          - mount_nfs is succeeded
+          - mount_copy is succeeded
+          - file_stat.stat.exists
+          - file_stat.stat.path | basename == 'file'
+          - not file_stat.stat.isdir
+
+    - name: playbook var|any|clean nfs
+      ansible.builtin.set_fact:
+        mount_temp: !!null
+        mount_nfs: !!null
