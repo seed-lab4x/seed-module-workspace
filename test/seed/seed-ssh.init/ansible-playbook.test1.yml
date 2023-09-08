@@ -1,0 +1,18 @@
+# code: language=ansible
+---
+
+- name: test|remote
+  vars:
+    ansible_ssh_extra_args: '-o StrictHostKeyChecking=no'
+  hosts: "{{ ssh.group | default('ssh',true) }}"
+  gather_facts: false
+  tasks:
+
+    - name: 1|init ssh
+      include_tasks: seed-ssh.test.yml
+      vars:
+        ssh:
+          # group: ssh
+          name: "test-ssh-init-1"
+          dir: "{{ playbook_dir }}/build"
+          approve_task: "{{ playbook_dir }}/../seed-ssh.approve/seed-ssh.test.yml"

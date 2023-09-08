@@ -1,0 +1,117 @@
+# code: language=ansible
+---
+
+- name: test|local
+  hosts: localhost
+  connection: local
+  tasks:
+
+    - name: init|mkdir build
+      ansible.builtin.file:
+        state: directory
+        path: "{{ playbook_dir }}/build/test-ssh-init-0"
+
+    - name: init|backup config
+      ansible.builtin.copy:
+        src: "~/.ssh/config"
+        dest: "{{ playbook_dir }}/build/test-ssh-init-0/config.bak"
+      register: config_backup
+
+    - name: init|backup known_hosts
+      ansible.builtin.copy:
+        src: "~/.ssh/known_hosts"
+        dest: "{{ playbook_dir }}/build/test-ssh-init-0/nown_hosts.bak"
+      register: known_backup
+
+
+- name: test|remote
+  vars:
+    ansible_ssh_extra_args: '-o StrictHostKeyChecking=no'
+  hosts: "{{ ssh.group | default('ssh',true) }}"
+  gather_facts: false
+  tasks:
+
+    - name: 0|init ssh
+      include_tasks: seed-ssh.test.yml
+      vars:
+        ssh:
+          # group: ssh
+          name: "test-ssh-init-0"
+          dir: "{{ playbook_dir }}/build"
+          approve_task: "{{ playbook_dir }}/../seed-ssh.approve/seed-ssh.test.yml"
+          config_path: "{{ playbook_dir }}/build/test-ssh-init-0/config"
+          known_path: "{{ playbook_dir }}/build/test-ssh-init-0/known_hosts"
+          known_hash: true
+          known_scan:
+            - 'ecdsa-sha2-nistp256'
+            - 'ssh-ed25519'
+            - 'ssh-rsa'
+
+
+- name: test|local
+  hosts: localhost
+  connection: local
+  tasks:
+
+    - name: 0|exists keypair
+      loop:
+        - "{{ playbook_dir }}/build/test-ssh-init-0/id_rsa"
+        - "{{ playbook_dir }}/build/test-ssh-init-0/id_rsa.pub"
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: results_keypair
+      until: results_keypair.stat.exists
+
+    - name: 0|match config
+      loop:
+        - 'Host localhost'
+        - '    hostname localhost'
+        - '    port 22222'
+        - "    identityfile {{ playbook_dir }}/build/test-ssh-init-0/id_rsa"
+        - '    user seed'
+      ansible.builtin.lineinfile:
+        path: "{{ playbook_dir }}/build/test-ssh-init-0/config"
+        line: "{{ item }}"
+        state: present
+      check_mode: yes
+      register: results_config
+      failed_when: results_config is changed
+
+    - name: 0|authorized results
+      loop: "{{ groups['ssh'] }}"
+      loop_control:
+        loop_var: host_name
+      community.docker.docker_container_exec:
+        container: "test-ssh-init-{{ host_name }}"
+        command: "cat /config/.ssh/authorized_keys"
+      register: results_authorized
+
+    - name: 0|assert results
+      vars:
+        pub_path: "{{ playbook_dir }}/build/test-ssh-init-0/id_rsa.pub"
+        pub_content: "{{ lookup('file', pub_path) }}"
+      loop: "{{ results_authorized.results }}"
+      ansible.builtin.assert:
+        that:
+          - item.stdout_lines | map('trim') is contains(pub_content)
+
+
+- name: test|local
+  hosts: localhost
+  connection: local
+  tasks:
+
+    - name: 0|restore known_hosts
+      ansible.builtin.copy:
+        src: "{{ known_backup.dest }}"
+        dest: "~/.ssh/known_hosts"
+
+    - name: 0|restore config
+      ansible.builtin.copy:
+        src: "{{ config_backup.dest }}"
+        dest: "~/.ssh/config"
+
+    - name: clean|clean build
+      ansible.builtin.file:
+        state: absent
+        path: "{{ playbook_dir }}/build/test-ssh-init-0"

@@ -1,3 +1,16 @@
 # code: language=ansible
 
 alpine_command: sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/repositories
+
+ssh:
+  # group: ssh
+  name: local-test-2ssh
+  dir: "{{ playbook_dir }}/build"
+  approve_task: "{{ playbook_dir }}/../seed-ssh.approve/seed-ssh.test.yml"
+  config_path: "{{ playbook_dir }}/build/config"
+  known_path: "{{ playbook_dir }}/build/known_hosts"
+  known_hash: true
+  known_scan:
+    - 'ecdsa-sha2-nistp256'
+    - 'ssh-ed25519'
+    - 'ssh-rsa'

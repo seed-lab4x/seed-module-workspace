@@ -1,0 +1,60 @@
+# code: language=ansible
+---
+
+- name: init|local
+  hosts: localhost
+  connection: local
+  tasks:
+
+    - name: init|add ssh-server
+      loop: "{{ groups['ssh'] }}"
+      loop_control:
+        loop_var: host_name
+      community.docker.docker_container:
+        detach: true
+        name: "test-ssh-init-{{ host_name }}"
+        image: linuxserver/openssh-server:version-9.3_p2-r0
+        ports:
+          - "{{ hostvars[host_name].ansible_port }}:2222"
+        env:
+          SUDO_ACCESS: "true"
+          PASSWORD_ACCESS: "true"
+          USER_PASSWORD: "seed"
+          USER_NAME: "seed"
+      register: server_add
+      until: server_add is succeeded
+
+    - name: init|apk ssh-server
+      loop: "{{ groups['ssh'] }}"
+      loop_control:
+        loop_var: host_name
+      community.docker.docker_container_exec:
+        container: "test-ssh-init-{{ host_name }}"
+        command: "{{ alpine_command }}"
+      register: server_apk
+      until: server_apk is succeeded
+
+    - name: init|python ssh-server
+      loop: "{{ groups['ssh'] }}"
+      loop_control:
+        loop_var: host_name
+      community.docker.docker_container_exec:
+        container: "test-ssh-init-{{ host_name }}"
+        command: "apk add python3"
+      register: server_python
+      until: server_python is succeeded
+
+    - name: init|mkdir build
+      ansible.builtin.file:
+        state: directory
+        path: "{{ playbook_dir }}/build"
+
+    - name: init|backup config
+      ansible.builtin.copy:
+        src: "~/.ssh/config"
+        dest: "{{ playbook_dir }}/build/config.bak"
+
+    - name: init|backup known_hosts
+      ansible.builtin.copy:
+        src: "~/.ssh/known_hosts"
+        dest: "{{ playbook_dir }}/build/known_hosts.bak"
