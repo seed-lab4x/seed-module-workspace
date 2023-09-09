@@ -1,0 +1,16 @@
+# code: language=ansible
+---
+
+- name: seed-task.mock|fact redirect
+  vars:
+    redirect:
+      - search: seed-nfs/nfs-mount.wait.yml
+        replace: ../seed-nfs/nfs-mounts.wait/nfs-mount.wait.yml
+  ansible.builtin.set_fact:
+    _task_share:
+      run_once: "{{ task_share.run_once }}"
+      task: "{{ redirect | selectattr('search','equalto',task_share.task) | map(attribute='replace') | first }}"
+
+- include_tasks: ../seed-task.once/seed-task.test.yml
+  vars:
+    task_share: "{{ _task_share }}"
