@@ -1,0 +1,37 @@
+# code: language=ansible
+
+all:
+  hosts:
+    node1:
+      ansible_host: localhost
+      ansible_connection: local
+    node2:
+      ansible_host: localhost
+      ansible_connection: local
+    node3:
+      ansible_host: localhost
+      ansible_connection: local
+    node4:
+      ansible_host: localhost
+      ansible_connection: local
+    # fix inventory_dir is undefined https://github.com/ansible/ansible/issues/31087
+    localhost:
+      ansible_connection: local
+
+  children:
+    docker:
+      hosts:
+        node1:
+        node2:
+        node3:
+        node4:
+
+    docker-34:
+      hosts:
+        node3:
+        node4:
+
+    docker-manager:
+      hosts:
+        node1:
+        node3:
