@@ -1,0 +1,51 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/4docker/ansible-inventories
+# code: language=ansible
+---
+
+- name: clean|remote
+  hosts: docker
+  tasks:
+
+    - name: clean|clean bind volume
+      community.docker.docker_container:
+        name: "test-push-{{ inventory_hostname }}-bind-clean"
+        auto_remove: true
+        state: started
+        image: alpine:3.18
+        command: "rm -r /seed_vol"
+        volumes:
+          - "test-push-{{ inventory_hostname }}-bind:/seed_vol"
+
+    - name: clean|clean normal volume
+      community.docker.docker_container:
+        name: "test-push-{{ inventory_hostname }}-normal-clean"
+        auto_remove: true
+        state: started
+        image: alpine:3.18
+        command: "rm -r /seed_vol"
+        volumes:
+          - "test-push-{{ inventory_hostname }}-normal:/seed_vol"
+
+    - name: clean|remove bind volume
+      community.docker.docker_volume:
+        state: absent
+        name: "test-push-{{ inventory_hostname }}-bind"
+      register: volume_remove
+      until: volume_remove is succeeded
+
+    - name: clean|remove normal volume
+      community.docker.docker_volume:
+        state: absent
+        name: "test-push-{{ inventory_hostname }}-normal"
+      register: volume_remove
+      until: volume_remove is succeeded
+
+    - name: clean|clean bind path
+      ansible.builtin.file:
+        state: absent
+        path: "{{ workspace.remote }}/bind"
+
+    - name: clean|clean normal path
+      ansible.builtin.file:
+        state: absent
+        path: "{{ workspace.remote }}/normal"

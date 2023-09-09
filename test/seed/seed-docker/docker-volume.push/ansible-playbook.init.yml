@@ -1,0 +1,35 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/4docker/ansible-inventories
+# code: language=ansible
+---
+
+- name: init|remote
+  hosts: docker
+  tasks:
+
+    - name: init|mkdir bind path
+      ansible.builtin.file:
+        state: directory
+        path: "{{ workspace.remote }}/bind"
+
+    - name: init|add bind volume
+      community.docker.docker_volume:
+        name: "test-push-{{ inventory_hostname }}-bind"
+        driver: local
+        driver_options:
+          type: none
+          device: "{{ workspace.remote }}/bind"
+          o: bind
+
+    - name: init|mkdir normal path
+      ansible.builtin.file:
+        state: directory
+        path: "{{ workspace.remote }}/normal"
+
+    - name: init|add normal volume
+      community.docker.docker_volume:
+        name: "test-push-{{ inventory_hostname }}-normal"
+        driver: local
+        driver_options:
+          type: none
+          device: "{{ workspace.remote }}/normal"
+          o: bind
