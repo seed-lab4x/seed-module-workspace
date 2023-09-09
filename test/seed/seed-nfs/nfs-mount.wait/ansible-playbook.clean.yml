@@ -1,0 +1,66 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -K -i ${PWD}/../../test@local/3nfs/ansible-inventories
+# code: language=ansible
+---
+
+- name: clean|local
+  hosts: localhost
+  connection: local
+  tasks:
+
+    - name: clean|unmount
+      become: true
+      loop:
+        - "{{ playbook_dir }}/build/node1/playbook_1"
+        - "{{ playbook_dir }}/build/node2/playbook_1"
+        - "{{ playbook_dir }}/build/node3/playbook_1"
+        - "{{ playbook_dir }}/build/node1/playbook_2"
+        - "{{ playbook_dir }}/build/node2/playbook_2"
+        - "{{ playbook_dir }}/build/node3/playbook_2"
+        - "{{ playbook_dir }}/build/node1/playbook_3"
+        - "{{ playbook_dir }}/build/node2/playbook_3"
+        - "{{ playbook_dir }}/build/node3/playbook_3"
+        - "localhost:/none"
+        - "localhost:/"
+      ansible.posix.mount:
+        state: unmounted
+        path: "{{ item }}"
+
+    - name: clean|unmount
+      become: true
+      loop:
+        - "{{ playbook_dir }}/build/node1/playbook_1"
+        - "{{ playbook_dir }}/build/node2/playbook_1"
+        - "{{ playbook_dir }}/build/node3/playbook_1"
+        - "{{ playbook_dir }}/build/node1/playbook_2"
+        - "{{ playbook_dir }}/build/node2/playbook_2"
+        - "{{ playbook_dir }}/build/node3/playbook_2"
+        - "{{ playbook_dir }}/build/node1/playbook_3"
+        - "{{ playbook_dir }}/build/node2/playbook_3"
+        - "{{ playbook_dir }}/build/node3/playbook_3"
+        - "localhost:/none"
+        - "localhost:/"
+      ansible.posix.mount:
+        state: absent
+        path: "{{ item }}"
+
+    - name: clean|clean nfs-server
+      community.docker.docker_container:
+        state: absent
+        name: "test-mount-wait"
+
+    - name: clean|clean nfs-volume
+      community.docker.docker_volume:
+        state: absent
+        name: "test-mount-wait"
+
+    - name: clean|restore fstab
+      become: true
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/build/fstab.bak"
+        dest: "/etc/fstab"
+
+    - name: clean|clean build path
+      become: true
+      ansible.builtin.file:
+        state: absent
+        path: "{{ playbook_dir }}/build"
