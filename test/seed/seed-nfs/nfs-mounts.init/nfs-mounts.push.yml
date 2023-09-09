@@ -1,0 +1,19 @@
+# code: language=ansible
+---
+
+- name: nfs-mounts.push|debug share
+  run_once: true
+  ansible.builtin.debug:
+    var: mounts_share
+
+- name: nfs-mounts.push|debug param
+  ansible.builtin.debug:
+    var: mounts
+
+- name: nfs-mounts.push|fact result
+  vars:
+    result:
+      share: "{{ mounts_share | default('',true) }}"
+      param: "{{ mounts }}"
+  ansible.builtin.set_fact:
+    push_result: "{{ result }}"
