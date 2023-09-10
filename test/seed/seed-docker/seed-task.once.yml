@@ -14,6 +14,8 @@
         replace: ../seed-docker/docker-networks.wait/docker-network.wait.yml
       - search: seed-docker/docker-label.add.yml
         replace: ../seed-docker/docker-labels.add/docker-label.add.yml
+      - search: seed-docker/docker-config.add.yml
+        replace: ../seed-docker/docker-configs.add/docker-config.add.yml
   ansible.builtin.set_fact:
     _task_share:
       run_once: "{{ task_share.run_once }}"
