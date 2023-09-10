@@ -1,0 +1,68 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/4docker/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: docker
+  tasks:
+
+    - name: playbook var|all host|add network
+      include_tasks: docker-network.test.yml
+      vars:
+        network:
+          name: "test-add-{{ inventory_hostname }}-playbook_0"
+          labels:
+            from: playbook_0
+
+    - name: playbook var|all host|info network
+      community.docker.docker_network_info:
+        name: "test-add-{{ inventory_hostname }}-playbook_0"
+      register: network_info
+
+    - name: playbook var|all host|assert network
+      ansible.builtin.assert:
+        that:
+          - network_info.exists
+          - network_info.network.Labels['from'] == 'playbook_0'
+
+    - name: playbook var|all host|remove network
+      community.docker.docker_network:
+        state: absent
+        name: "test-add-{{ inventory_hostname }}-playbook_0"
+
+
+    - name: playbook var|any|add network
+      include_tasks: docker-network.test.yml
+      vars:
+        network_share:
+          any: true
+          group: docker-34
+        network:
+          name: "test-add-{{ inventory_hostname }}-playbook_1"
+          driver: "{{ 'bridge' if(inventory_hostname == 'node3') else 'none' }}"
+          labels:
+            from: playbook_1
+
+    - name: playbook var|any|info network
+      community.docker.docker_network_info:
+        name: "test-add-{{ inventory_hostname }}-playbook_1"
+      register: network_info
+
+    - name: playbook var|any|assert network host node3
+      when: inventory_hostname == 'node3'
+      ansible.builtin.assert:
+        that:
+          - network_info.exists
+          - network_info.network.Labels['from'] == 'playbook_1'
+
+    - name: playbook var|any|assert network host node4
+      when: inventory_hostname == 'node4'
+      ansible.builtin.assert:
+        that:
+          - not network_info.exists
+
+    - name: playbook var|docker-34|remove network
+      when: inventory_hostname in groups['docker-34'] | default([],true)
+      community.docker.docker_network:
+        state: absent
+        name: "test-add-{{ inventory_hostname }}-playbook_1"
