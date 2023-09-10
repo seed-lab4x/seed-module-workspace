@@ -1,0 +1,115 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/4docker/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: docker
+  tasks:
+
+    - name: playbook var|index loop|fact label for each host
+      vars:
+        keys:
+          - "test-{{ inventory_hostname }}-playbook_0"
+          - "test-is-manager"
+        values:
+          - 'true'
+          - "{{ 'yes' if(inventory_hostname in groups['docker-manager']) else 'no' }}"
+      ansible.builtin.set_fact:
+        _label_0: "{{ dict(keys | zip(values)) }}"
+
+    - name: playbook var|index loop|add labels
+      include_tasks: docker-labels.test.yml
+      vars:
+        labels:
+          - hostname: "{{ host_name }}"
+            # cant eval `inventory_hostname` on key
+            labels: "{{ _label_0 }}"
+              # same like this
+              # "test-{{ inventory_hostname }}-playbook_0": 'true'
+              # "test-is-manager": "{{ 'yes' if(inventory_hostname in groups['docker-manager']) else 'no' }}"
+          - hostname: "{{ host_name }}"
+            labels:
+              "playbook_1": "true"
+
+    - name: playbook var|index loop|assert labels
+      ansible.builtin.assert:
+        that:
+          - test_include_count | int == 2
+          - test_append_result | length == 2
+          - test_append_result[0].index == '0'
+          - test_append_result[1].index == '1'
+
+    - name: playbook var|index loop|clean test
+      ansible.builtin.set_fact:
+        test_include_count: 0
+        test_append_result: []
+
+
+    - name: playbook var|value loop|fact label for each host
+      vars:
+        keys:
+          - "test-{{ inventory_hostname }}-playbook_2"
+          - "test-is-manager"
+        values:
+          - 'true'
+          - "{{ 'yes' if(inventory_hostname in groups['docker-manager']) else 'no' }}"
+      ansible.builtin.set_fact:
+        _label_2: "{{ dict(keys | zip(values)) }}"
+
+    - name: playbook var|value loop|add labels
+      include_tasks: docker-labels.test.yml
+      vars:
+        labels_share:
+          mode: value
+          group: docker-manager
+        labels:
+          - once: false
+            any: false
+            hostname: "{{ host_name }}"
+            # cant eval `inventory_hostname` on key
+            labels: "{{ _label_2 }}"
+              # same like this
+              # "test-{{ inventory_hostname }}-playbook_2": 'true'
+              # "test-is-manager": "{{ 'yes' if(inventory_hostname in groups['docker-manager']) else 'no' }}"
+          - once: false
+            any: true
+            hostname: "{{ host_name }}"
+            labels:
+              "playbook_3": "true"
+          - once: true
+            any: true
+            hostname: "{{ host_name }}"
+            labels:
+              "playbook_4": "true"
+
+    - name: playbook var|value loop|assert labels
+      ansible.builtin.assert:
+        that:
+          - test_include_count | int == (2 + 1 + 1)
+
+    - name: playbook var|value loop|assert labels host node1
+      when: inventory_hostname == 'node1'
+      ansible.builtin.assert:
+        that:
+          - test_append_result | length == 3
+          - test_append_result[0].share.any == false
+          - test_append_result[0].param.labels['test-node1-playbook_2'] == 'true'
+          - test_append_result[1].share.any == true
+          - test_append_result[1].param.labels['playbook_3'] == 'true'
+          - test_append_result[2].share.any == true
+          - test_append_result[2].param.labels['playbook_4'] == 'true'
+
+    - name: playbook var|value loop|assert labels host node3
+      when: inventory_hostname == 'node3'
+      ansible.builtin.assert:
+        that:
+          - test_append_result | length == 2
+          - test_append_result[0].share.any == true
+          - test_append_result[0].param.labels['playbook_3'] == 'true'
+          - test_append_result[1].share.any == false
+          - test_append_result[1].param.labels['test-node3-playbook_2'] == 'true'
+
+    - name: playbook var|value loop|clean test
+      ansible.builtin.set_fact:
+        test_include_count: 0
+        test_append_result: []

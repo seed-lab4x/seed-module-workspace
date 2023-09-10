@@ -1,0 +1,25 @@
+# code: language=ansible
+---
+
+- name: docker-label.add|debug share
+  run_once: true
+  ansible.builtin.debug:
+    var: label_share
+
+- name: docker-label.add|debug param
+  ansible.builtin.debug:
+    var: label
+
+- name: docker-label.add|fact append result
+  vars:
+    item:
+      share: "{{ label_share }}"
+      param: "{{ label }}"
+      index: "{{ label_index | default('') }}"
+  ansible.builtin.set_fact:
+    test_append_result: "{{ test_append_result | default([]) + [item] }}"
+
+- name: docker-label.add|fact include count
+  run_once: true
+  ansible.builtin.set_fact:
+    test_include_count: "{{ test_include_count | default(0) | int + 1 }}"
