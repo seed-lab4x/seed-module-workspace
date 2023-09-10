@@ -1,0 +1,80 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/4docker/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: docker
+  tasks:
+
+    - name: fact label for each host
+      vars:
+        keys:
+          - "test-{{ inventory_hostname }}-playbook_0"
+          - "test-is-manager"
+        values:
+          - 'true'
+          - "{{ 'yes' if(inventory_hostname in groups['docker-manager']) else 'no' }}"
+      ansible.builtin.set_fact:
+        _label_0: "{{ dict(keys | zip(values)) }}"
+
+    - name: playbook var|all host|add label
+      include_tasks: docker-label.test.yml
+      vars:
+        label:
+          hostname: "{{ host_name }}"
+          # cant eval `inventory_hostname` on key
+          labels: "{{ _label_0 }}"
+            # same like this
+            # "test-{{ inventory_hostname }}-playbook_0": 'true'
+            # "test-is-manager": "{{ 'yes' if(inventory_hostname in groups['docker-manager']) else 'no' }}"
+
+    - name: playbook var|all host|info label
+      when: inventory_hostname in groups['docker-manager']
+      ansible.builtin.shell: "docker node inspect {{ host_name }}"
+      register: label_info
+
+    - name: playbook var|all host|assert label
+      when: inventory_hostname in groups['docker-manager']
+      vars:
+        json: "{{ label_info.stdout | from_json | first }}"
+      ansible.builtin.assert:
+        that:
+          - json.Spec.Labels['test-node1-playbook_0'] == 'true'
+          - json.Spec.Labels['test-node3-playbook_0'] == 'true'
+          - json.Spec.Labels['test-is-manager'] == 'yes'
+
+    - name: playbook var|all host|remove label
+      community.docker.docker_node:
+        hostname: "{{ host_name }}"
+        labels_to_remove: "{{ _label_0.keys() }}"
+
+
+    - name: playbook var|any|add label
+      include_tasks: docker-label.test.yml
+      vars:
+        label_share:
+          any: true
+          group: docker-manager
+        label:
+          hostname: "{{ host_name }}"
+          labels:
+            "playbook_1": "true"
+
+    - name: playbook var|any|info label
+      when: inventory_hostname in groups['docker-manager']
+      ansible.builtin.shell: "docker node inspect {{ host_name }}"
+      register: label_info
+
+    - name: playbook var|all host|assert label
+      when: inventory_hostname in groups['docker-manager']
+      vars:
+        json: "{{ label_info.stdout | from_json | first }}"
+      ansible.builtin.assert:
+        that:
+          - json.Spec.Labels['playbook_1'] == 'true'
+
+    - name: playbook var|all host|remove label
+      community.docker.docker_node:
+        hostname: "{{ host_name }}"
+        labels_to_remove:
+          - playbook_1
