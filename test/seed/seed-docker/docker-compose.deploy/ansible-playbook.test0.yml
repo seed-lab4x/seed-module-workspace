@@ -1,0 +1,31 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/4docker/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: docker
+  tasks:
+
+    - name: playbook var|fact workspace
+      include_tasks: "{{ workspace.local }}/seed/ansible-tasks/seed-workspace.fact.yml"
+
+    - name: playbook var|fact workpath
+      include_tasks: "{{ workspace.local }}/{{ workspace.seedpath }}/ansible-tasks/seed-workpath.fact.yml"
+
+
+    - name: playbook var|all host|empty var|deploy compose
+      include_tasks: docker-compose.test.yml
+      vars:
+        compose:
+
+    - name: playbook var|all host|empty var|stat workpath
+      ansible.builtin.stat:
+        path: "{{ workpath.remote.full }}"
+      register: workpath_stat
+
+    - name: playbook var|all host|empty var|assert compose
+      ansible.builtin.assert:
+        that:
+          - workpath_stat.stat.exists
+          - workpath_stat.stat.path | basename == 'docker-compose.deploy'
+          - workpath_stat.stat.isdir

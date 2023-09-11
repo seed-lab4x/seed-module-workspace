@@ -1,0 +1,104 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/4docker/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: docker
+  tasks:
+
+    - name: playbook var|fact workspace
+      include_tasks: "{{ workspace.local }}/seed/ansible-tasks/seed-workspace.fact.yml"
+
+    - name: playbook var|fact workpath
+      include_tasks: "{{ workspace.local }}/{{ workspace.seedpath }}/ansible-tasks/seed-workpath.fact.yml"
+      vars:
+        workpath:
+          path: "{{ workspace.local }}/playbook_3"
+
+
+    - name: playbook var|all host|add var|deploy compose
+      include_tasks: docker-compose.test.yml
+      vars:
+        compose:
+          name: "test-deploy-{{ inventory_hostname }}-playbook_3"
+          path: "{{ workpath.remote.full }}"
+          vars:
+            files:
+              - dest: "{{ workpath.remote.full }}/.env"
+            volumes:
+              - name: test-deploy-{{ inventory_hostname }}-playbook_3
+                driver: local
+            networks:
+              - name: test-deploy-{{ inventory_hostname }}-playbook_3
+                driver: bridge
+            envs:
+              - file: .env/all.env
+                content: |
+                  TZ=Asia/Hong_Kong
+            composes:
+              - file: "test-deploy-playbook_3.compose.yml"
+                content: |
+                  version: "3.8"
+                  volumes:
+                    vol:
+                      name: test-deploy-{{ inventory_hostname }}-playbook_3
+                      external: true
+                  networks:
+                    net:
+                      name: test-deploy-{{ inventory_hostname }}-playbook_3
+                      external: true
+                  services:
+                    playbook_3:
+                      env_file: .env/all.env
+                      image: alpine:3.18
+                      command: "tail -f /dev/null"
+                      volumes:
+                        - vol:/vol
+                      networks:
+                        - net
+          default:
+            files:
+              - dest: "{{ workpath.remote.full }}"
+            envs:
+              - file: test-deploy-playbook_3.compose.env
+                content: |
+                  TZ=Asia/Hong_Kong
+            composes:
+              - file: test-deploy-playbook_3.compose.yml
+                content: |
+                  version: "3.8"
+                  services:
+                    playbook_3:
+                      image: alpine:3.18
+                      command: "tail -f /dev/null"
+
+    - name: playbook var|all host|add var|info container
+      community.docker.docker_container_info:
+        name: "test-deploy-{{ inventory_hostname }}-playbook_3_playbook_3_1"
+      register: container_info
+
+    - name: playbook var|all host|add var|assert compose
+      ansible.builtin.assert:
+        that:
+          - container_info.container.Name is contains(inventory_hostname)
+          - container_info.container.Name is contains('playbook_3')
+
+    - name: playbook var|all host|add var|remove compose
+      community.docker.docker_compose:
+        state: absent
+        project_name: "test-deploy-{{ inventory_hostname }}-playbook_3"
+        project_src: "{{ workpath.remote.full }}"
+        files:
+          - "test-deploy-playbook_3.compose.yml"
+        # remove vol
+        remove_volumes: true
+
+    - name: playbook var|all host|add var|remove volume
+      community.docker.docker_volume:
+        state: absent
+        name: test-deploy-{{ inventory_hostname }}-playbook_3
+
+    - name: playbook var|all host|add var|remove network
+      community.docker.docker_network:
+        state: absent
+        name: test-deploy-{{ inventory_hostname }}-playbook_3

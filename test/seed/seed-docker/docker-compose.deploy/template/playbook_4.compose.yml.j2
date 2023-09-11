@@ -1,0 +1,18 @@
+version: "3.8"
+volumes:
+  vol:
+    name: test-deploy-any-playbook_4
+    external: true
+networks:
+  net:
+    name: test-deploy-{{ inventory_hostname }}-playbook_4
+    external: true
+services:
+  playbook_4:
+    env_file: .env/all.env
+    image: alpine:3.18
+    command: "tail -f /dev/null"
+    volumes:
+      - vol:/vol
+    networks:
+      - net
