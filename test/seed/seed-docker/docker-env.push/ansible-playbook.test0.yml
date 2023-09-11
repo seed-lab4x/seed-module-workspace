@@ -1,0 +1,154 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/4docker/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: docker
+  tasks:
+
+    - name: playbook var|all host|push env string dest
+      include_tasks: docker-env.test.yml
+      vars:
+        env:
+          dest: "{{ workspace.remote }}/test-from-playbook_0.env"
+          content: |
+            FROM=playbook_0
+            UNSAFE=/conf/{{ '{{.Node.Hostname}}' }}
+            IS_MANAGER={{ 'yes' if(inventory_hostname in groups['docker-manager']) else 'no' }}
+
+    - name: playbook var|all host|info env string dest
+      ansible.builtin.stat:
+        path: "{{ workspace.remote }}/test-from-playbook_0.env"
+      register: file_stat
+
+    - name: playbook var|all host|assert env string dest
+      vars:
+        file_content: "{{ lookup('file',file_stat.stat.path) }}"
+      ansible.builtin.assert:
+        that:
+          - file_stat.stat.exists
+          - file_stat.stat.path | basename == 'test-from-playbook_0.env'
+          - not file_stat.stat.isdir
+          - file_content is contains('playbook_0')
+
+
+    - name: playbook var|all host|push env list file
+      include_tasks: docker-env.test.yml
+      vars:
+        workpath:
+          remote:
+            full: "{{ playbook_dir }}/build/{{ inventory_hostname }}"
+        env:
+          file: "test-from-playbook_1.env"
+          content:
+            - FROM=playbook_1
+            - !unsafe 'UNSAFE=/conf/{{.Node.Hostname}}'
+            - IS_MANAGER={{ 'yes' if(inventory_hostname in groups['docker-manager']) else 'no' }}
+
+    - name: playbook var|all host|info env list file
+      ansible.builtin.stat:
+        path: "{{ workspace.remote }}/test-from-playbook_1.env"
+      register: file_stat
+
+    - name: playbook var|all host|assert env list file
+      vars:
+        file_content: "{{ lookup('file',file_stat.stat.path) }}"
+      ansible.builtin.assert:
+        that:
+          - file_stat.stat.exists
+          - file_stat.stat.path | basename == 'test-from-playbook_1.env'
+          - not file_stat.stat.isdir
+          - file_content is contains('playbook_1')
+
+
+    - name: playbook var|all host|push env dict file
+      include_tasks: docker-env.test.yml
+      vars:
+        workpath:
+          remote:
+            full: "{{ playbook_dir }}/build/{{ inventory_hostname }}"
+        env:
+          file: "test-from-playbook_2.env"
+          content:
+            FROM: playbook_2
+            UNSAFE: !unsafe '/conf/{{.Node.Hostname}}'
+            IS_MANAGER: "{{ 'yes' if(inventory_hostname in groups['docker-manager']) else 'no' }}"
+
+    - name: playbook var|all host|info env dict file
+      ansible.builtin.stat:
+        path: "{{ workspace.remote }}/test-from-playbook_2.env"
+      register: file_stat
+
+    - name: playbook var|all host|assert env dict file
+      vars:
+        file_content: "{{ lookup('file',file_stat.stat.path) }}"
+      ansible.builtin.assert:
+        that:
+          - file_stat.stat.exists
+          - file_stat.stat.path | basename == 'test-from-playbook_2.env'
+          - not file_stat.stat.isdir
+          - file_content is contains('playbook_2')
+
+
+    - name: playbook var|all host|push env temp dest
+      include_tasks: docker-env.test.yml
+      vars:
+        workpath:
+          remote:
+            full: "{{ playbook_dir }}/build/{{ inventory_hostname }}"
+        env:
+          dest: "{{ workspace.remote }}/test-from-playbook_3.env"
+          template: "{{ playbook_dir }}/template/playbook_3.env"
+
+    - name: playbook var|all host|info env temp dest
+      ansible.builtin.stat:
+        path: "{{ workspace.remote }}/test-from-playbook_3.env"
+      register: file_stat
+
+    - name: playbook var|all host|assert env temp dest
+      vars:
+        file_content: "{{ lookup('file',file_stat.stat.path) }}"
+      ansible.builtin.assert:
+        that:
+          - file_stat.stat.exists
+          - file_stat.stat.path | basename == 'test-from-playbook_3.env'
+          - not file_stat.stat.isdir
+          - file_content is contains('playbook_3')
+
+
+    - name: playbook var|any|push env temp file
+      include_tasks: docker-env.test.yml
+      vars:
+        workpath:
+          remote:
+            full: "{{ playbook_dir }}/build/{{ inventory_hostname }}"
+        env_share:
+          any: true
+          group: docker-34
+        env:
+          file: "test-from-playbook_4.env"
+          template: "{{ playbook_dir }}/template/playbook_4.env.j2{{  '' if(inventory_hostname == 'node3') else 'none' }}"
+          vars:
+            IS_MANAGER: "{{ 'yes' if(inventory_hostname in groups['docker-manager']) else 'no' }}"
+
+    - name: playbook var|any|info env temp file
+      ansible.builtin.stat:
+        path: "{{ workspace.remote }}/test-from-playbook_4.env"
+      register: file_stat
+
+    - name: playbook var|any|assert env temp file host node3
+      when: inventory_hostname == 'node3'
+      vars:
+        file_content: "{{ lookup('file',file_stat.stat.path) }}"
+      ansible.builtin.assert:
+        that:
+          - file_stat.stat.exists
+          - file_stat.stat.path | basename == 'test-from-playbook_4.env'
+          - not file_stat.stat.isdir
+          - file_content is contains('playbook_4')
+
+    - name: playbook var|any|assert env temp file host node4
+      when: inventory_hostname == 'node4'
+      ansible.builtin.assert:
+        that:
+          - not file_stat.stat.exists
