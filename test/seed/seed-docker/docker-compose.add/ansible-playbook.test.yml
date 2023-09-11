@@ -1,0 +1,84 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/4docker/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: docker
+  tasks:
+
+    - name: playbook var|all host|add compose
+      include_tasks: docker-compose.test.yml
+      vars:
+        compose:
+          name: "test-add-{{ inventory_hostname }}-playbook_0"
+          path: "{{ playbook_dir }}/compose/{{ inventory_hostname }}"
+          files:
+            - "docker-compose.yml"
+
+    - name: playbook var|all host|info compose
+      community.docker.docker_container_info:
+        name: "test-add-{{ inventory_hostname }}-playbook_0_main_1"
+      register: container_info
+
+    - name: playbook var|all host|assert compose
+      ansible.builtin.assert:
+        that:
+          - container_info.container.Name is contains(inventory_hostname)
+          - container_info.container.Name is contains('playbook_0')
+
+    - name: playbook var|all host|remove compose
+      community.docker.docker_compose:
+        state: absent
+        project_name: "test-add-{{ inventory_hostname }}-playbook_0"
+        project_src: "{{ playbook_dir }}/compose/{{ inventory_hostname }}"
+        files:
+          - "docker-compose.yml"
+        # remove vol
+        remove_volumes: true
+
+
+    - name: playbook var|any|add stack
+      include_tasks: docker-compose.test.yml
+      vars:
+        compose_share:
+          group: docker-manager
+          any: true
+        compose:
+          name: "test-add-{{ inventory_hostname }}-playbook_1"
+          type: stack
+          path: "{{ playbook_dir }}/compose/any{{ '' if(inventory_hostname == 'node3') else 'none' }}"
+          files:
+            - "docker-compose-swarm.yml"
+
+    - name: playbook var|any|info stack
+      when: inventory_hostname in groups['docker-manager']
+      community.docker.docker_swarm_service_info:
+        name: "test-add-{{ inventory_hostname }}-playbook_1_main"
+      register: service_info
+
+    - name: playbook var|any|assert stack host node1
+      when: inventory_hostname == 'node1'
+      ansible.builtin.assert:
+        that:
+          - service_info.service.Spec.Name is undefined
+
+    - name: playbook var|any|assert stack host node3
+      when: inventory_hostname == 'node3'
+      ansible.builtin.assert:
+        that:
+          - service_info.service.Spec.Name is contains(inventory_hostname)
+          - service_info.service.Spec.Name is contains('playbook_1')
+
+    - name: playbook var|any|remove stack
+      when: inventory_hostname in groups['docker-manager']
+      community.docker.docker_stack:
+        state: absent
+        name: "test-add-{{ inventory_hostname }}-playbook_1"
+
+    - name: playbook var|any|add var|remove volume
+      when: inventory_hostname in groups['docker-manager']
+      community.docker.docker_volume:
+        state: absent
+        name: test-add-{{ inventory_hostname }}-playbook_1_main-vol
+      register: volume_remove
+      until: volume_remove is succeeded
