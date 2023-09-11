@@ -1,0 +1,16 @@
+version: "3.8"
+
+networks:
+  playbook_1:
+
+volumes:
+  playbook_1:
+
+services:
+  playbook_1:
+    image: alpine:3.18
+    command: "tail -f /dev/null"
+    volumes:
+      - playbook_1:/alpine
+    networks:
+      - playbook_1

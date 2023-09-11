@@ -1,0 +1,18 @@
+version: "3.8"
+
+networks:
+  playbook_2:
+
+volumes:
+  playbook_2:
+
+services:
+  playbook_2:
+    image: alpine:3.18
+{% if VARS.COMMAND %}
+    command: "{{ VARS.COMMAND }}"
+{% endif %}
+    volumes:
+      - playbook_2:/alpine
+    networks:
+      - playbook_2
