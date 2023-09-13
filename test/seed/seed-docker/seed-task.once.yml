@@ -1,32 +1,45 @@
 # code: language=ansible
 ---
 
-- name: seed-task.mock|fact redirect
-  vars:
-    redirect:
-      - search: seed-docker/docker-volume.add.yml
-        replace: ../seed-docker/docker-volumes.add/docker-volume.add.yml
-      - search: seed-docker/docker-volume.push.yml
-        replace: ../seed-docker/docker-volumes.push/docker-volume.push.yml
-      - search: seed-docker/docker-network.add.yml
-        replace: ../seed-docker/docker-networks.add/docker-network.add.yml
-      - search: seed-docker/docker-network.wait.yml
-        replace: ../seed-docker/docker-networks.wait/docker-network.wait.yml
-      - search: seed-docker/docker-label.add.yml
-        replace: ../seed-docker/docker-labels.add/docker-label.add.yml
-      - search: seed-docker/docker-config.add.yml
-        replace: ../seed-docker/docker-configs.add/docker-config.add.yml
-      - search: seed-docker/docker-secret.add.yml
-        replace: ../seed-docker/docker-secrets.add/docker-secret.add.yml
-      - search: seed-docker/docker-env.push.yml
-        replace: ../seed-docker/docker-envs.push/docker-env.push.yml
-      - search: seed-docker/docker-compose.push.yml
-        replace: ../seed-docker/docker-composes.push/docker-compose.push.yml
+- name: seed-task.mock|fact not test redirect
+  run_once: true
+  when:
+    - playbook_dir is contains('test/seed/seed-docker/docker-stack.deploy')
   ansible.builtin.set_fact:
-    _task_share:
-      run_once: "{{ task_share.run_once }}"
-      task: "{{ redirect | selectattr('search','equalto',task_share.task) | map(attribute='replace') | first }}"
+    test_redirect: false
 
-- include_tasks: ../seed-task.once/seed-task.test.yml
-  vars:
-    task_share: "{{ _task_share }}"
+- when: not(test_redirect | default(true) | bool)
+  include_tasks: ../../../seed/ansible-tasks/seed-task.once.yml
+
+- when: test_redirect | default(true) | bool
+  block:
+  - name: seed-task.mock|fact redirect
+    vars:
+      redirect:
+        - search: seed-docker/docker-volume.add.yml
+          replace: ../seed-docker/docker-volumes.add/docker-volume.add.yml
+        - search: seed-docker/docker-volume.push.yml
+          replace: ../seed-docker/docker-volumes.push/docker-volume.push.yml
+        - search: seed-docker/docker-network.add.yml
+          replace: ../seed-docker/docker-networks.add/docker-network.add.yml
+        - search: seed-docker/docker-network.wait.yml
+          replace: ../seed-docker/docker-networks.wait/docker-network.wait.yml
+        - search: seed-docker/docker-label.add.yml
+          replace: ../seed-docker/docker-labels.add/docker-label.add.yml
+        - search: seed-docker/docker-config.add.yml
+          replace: ../seed-docker/docker-configs.add/docker-config.add.yml
+        - search: seed-docker/docker-secret.add.yml
+          replace: ../seed-docker/docker-secrets.add/docker-secret.add.yml
+        - search: seed-docker/docker-env.push.yml
+          replace: ../seed-docker/docker-envs.push/docker-env.push.yml
+        - search: seed-docker/docker-compose.push.yml
+          replace: ../seed-docker/docker-composes.push/docker-compose.push.yml
+    run_once: true
+    ansible.builtin.set_fact:
+      _task_share:
+        run_once: "{{ task_share.run_once }}"
+        task: "{{ redirect | selectattr('search','equalto',task_share.task) | map(attribute='replace') | first }}"
+
+  - include_tasks: ../seed-task.once/seed-task.test.yml
+    vars:
+      task_share: "{{ _task_share }}"
