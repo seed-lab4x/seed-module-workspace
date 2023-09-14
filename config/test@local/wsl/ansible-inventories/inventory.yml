@@ -1,0 +1,16 @@
+# code: language=ansible
+
+all:
+  hosts:
+    # fix inventory_dir is undefined https://github.com/ansible/ansible/issues/31087
+    localhost:
+      ansible_connection: local
+
+  children:
+    ssh:
+      hosts:
+        localhost:
+
+    docker:
+      hosts:
+        localhost:
