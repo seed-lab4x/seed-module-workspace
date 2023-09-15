@@ -1,0 +1,76 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/4docker/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: docker
+  tasks:
+
+    - name: playbook var|all host|exec container
+      include_tasks: docker-container.test.yml
+      vars:
+        container:
+          container: "test-container-exec"
+          command: "echo 'exec on {{ inventory_hostname }}'"
+          register: container_exec
+
+    - name: playbook var|all host|assert container
+      ansible.builtin.assert:
+        that:
+          - container_exec.stdout is contains(inventory_hostname)
+
+    - name: playbook var|all host|clean container_exec
+      ansible.builtin.set_fact:
+        container_exec: !!null
+
+
+    - name: playbook var|all host|multi-command|exec container
+      include_tasks: docker-container.test.yml
+      vars:
+        container:
+          container: "test-container-exec"
+          command:
+            - "echo 'exec on {{ inventory_hostname }}'"
+            - "echo 'hello world'"
+          register: container_exec
+
+    - name: playbook var|all host|multi-command|assert container
+      ansible.builtin.assert:
+        that:
+          - container_exec.results[0].stdout is contains(inventory_hostname)
+          - container_exec.results[1].stdout is contains('hello world')
+
+    - name: playbook var|all host|multi-command|clean container_exec
+      ansible.builtin.set_fact:
+        container_exec: !!null
+
+
+    - name: playbook var|any|exec container
+      include_tasks: docker-container.test.yml
+      vars:
+        container_share:
+          any: true
+          group: docker-34
+        container:
+          container: "test-container-exec{{ '' if(inventory_hostname == 'node3') else 'none' }}"
+          command: "echo 'exec on {{ inventory_hostname }}'"
+          register: container_exec
+          append: containers_exec
+
+    - name: playbook var|any|assert container host node3
+      when: inventory_hostname == 'node3'
+      ansible.builtin.assert:
+        that:
+          - container_exec.stdout is contains(inventory_hostname)
+          - containers_exec | length == 1
+
+    - name: playbook var|any|assert container host node4
+      when: inventory_hostname == 'node4'
+      ansible.builtin.assert:
+        that:
+          - container_exec_one is failed
+          - container_exec | default(None,true) == None
+
+    - name: playbook var|any|clean container_exec
+      ansible.builtin.set_fact:
+        container_exec: !!null
