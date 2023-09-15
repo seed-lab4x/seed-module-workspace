@@ -1,0 +1,15 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/3nfs/ansible-inventories
+# code: language=ansible
+---
+
+- name: init|local
+  hosts: localhost
+  connection: local
+  tasks:
+
+    - name: init|add container
+      community.docker.docker_container:
+        detach: true
+        name: "test-container-wait"
+        image: alpine:latest
+        command: "tail -f /dev/null"
