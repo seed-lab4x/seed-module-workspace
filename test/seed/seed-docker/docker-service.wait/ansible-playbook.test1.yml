@@ -1,0 +1,81 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/4docker/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: docker
+  tasks:
+
+    - block:
+      - name: playbook var|all containers|failed|wait service
+        include_tasks: docker-service.test.yml
+        vars:
+          service:
+            name: "test-wait-failed-playbook_0"
+            containers:
+              until:
+                - service_containers_info.results | length > 0
+              delay_start: 1
+              retries: 1
+              delay: 1
+
+      rescue:
+      - name: playbook var|all containers|failed|assert service
+        ansible.builtin.assert:
+          that:
+            - service_containers_info.results | length == 0
+
+      always:
+      - name: playbook var|all containers|failed|clean service_info
+        ansible.builtin.set_fact:
+          service_containers_info: !!null
+          # failed will keep this
+          _service_containers: !!null
+          _service: !!null
+
+
+    - name: playbook var|any containers|exists|wait service
+      include_tasks: docker-service.test.yml
+      vars:
+        service_share:
+          any: true
+          group: docker-manager
+          containers:
+            any: true
+            group: docker
+        service:
+          name: "test-service-wait{{ '' if(inventory_hostname == 'node3') else 'none' }}"
+          until:
+            - service_info.exists
+          delay_start: 1
+          retries: 1
+          delay: 1
+          append: services_info
+          containers:
+            until:
+              - service_containers_info.results | length > 0
+            delay_start: 1
+            retries: 1
+            delay: 1
+            append: services_containers_info
+
+    - name: playbook var|any containers|exists|assert service host node3
+      when: inventory_hostname == 'node3'
+      ansible.builtin.assert:
+        that:
+          - service_info.exists
+          - service_info.service.Spec.Name is contains('test-service-wait')
+          - services_info | length == 1
+          - service_containers_info.results[0].container.Name is contains('test-service-wait')
+          - services_containers_info | length == 1
+          - services_containers_info[0].results[0].container.Name is contains('test-service-wait')
+
+    - name: playbook var|any containers|exists|assert service host node1
+      when: inventory_hostname == 'node1'
+      ansible.builtin.assert:
+        that:
+          - not service_info.exists
+
+    - name: playbook var|any containers|exists|clean service_info
+      ansible.builtin.set_fact:
+        service_info: !!null
