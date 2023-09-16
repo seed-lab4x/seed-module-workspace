@@ -1,0 +1,24 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/3nfs/ansible-inventories
+# code: language=ansible
+---
+
+- name: init|local
+  hosts: localhost
+  connection: local
+  tasks:
+
+    - name: init|add service
+      community.docker.docker_swarm_service:
+        name: "test-service-exec"
+        image: alpine:latest
+        command: "tail -f /dev/null"
+
+    - name: init|add service replicas
+      community.docker.docker_swarm_service:
+        name: "test-service-exec-replicas"
+        image: alpine:latest
+        command: "tail -f /dev/null"
+        replicas: 2
+        placement:
+          replicas_max_per_node: 2
+

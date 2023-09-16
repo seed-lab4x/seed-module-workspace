@@ -1,0 +1,77 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/4docker/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: docker
+  tasks:
+
+    - name: playbook var|all service|exec service
+      include_tasks: docker-service.test.yml
+      vars:
+        service:
+          name: "test-service-exec"
+          command: "echo 'exec on {{ inventory_hostname }}'"
+          register: service_exec
+
+    - name: playbook var|all service|assert service
+      ansible.builtin.assert:
+        that:
+          - service_exec.results[0].stdout is contains(inventory_hostname)
+
+    - name: playbook var|all service|clean service_exec
+      ansible.builtin.set_fact:
+        service_exec: !!null
+
+
+    - name: playbook var|all service|multi-command|exec service
+      include_tasks: docker-service.test.yml
+      vars:
+        service:
+          name: "test-service-exec"
+          command:
+            - "echo 'exec on {{ inventory_hostname }}'"
+            - "echo 'hello world'"
+          register: service_exec
+
+    - name: playbook var|all service|multi-command|assert service
+      ansible.builtin.assert:
+        that:
+          - service_exec.results[0].stdout is contains(inventory_hostname)
+          - service_exec.results[1].stdout is contains('hello world')
+
+    - name: playbook var|all service|multi-command|clean service_exec
+      ansible.builtin.set_fact:
+        service_exec: !!null
+
+
+    - name: playbook var|any service|exec service
+      include_tasks: docker-service.test.yml
+      vars:
+        service_share:
+          any: true
+          group: docker-manager
+        service:
+          name: "test-service-exec{{ '' if(inventory_hostname == 'node3') else 'none' }}"
+          command: "echo 'exec on {{ inventory_hostname }}'"
+          cross: true
+          append: services_exec
+          register: service_exec
+
+    - name: playbook var|any service|assert service host node3
+      when: inventory_hostname == 'node3'
+      ansible.builtin.assert:
+        that:
+          - service_exec.results[0].stdout is contains(inventory_hostname)
+          - service_exec.cross[0].stdout is contains(inventory_hostname)
+          - services_exec | length == 1
+
+    - name: playbook var|any service|assert service host node1
+      when: inventory_hostname == 'node1'
+      ansible.builtin.assert:
+        that:
+          - service_exec.results | length == 0
+
+    - name: playbook var|any service|clean service_exec
+      ansible.builtin.set_fact:
+        service_exec: !!null
