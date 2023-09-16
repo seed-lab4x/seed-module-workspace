@@ -1,0 +1,25 @@
+# code: language=ansible
+---
+
+- name: docker-service.exec|debug share
+  run_once: true
+  ansible.builtin.debug:
+    var: service_share
+
+- name: docker-service.exec|debug param
+  ansible.builtin.debug:
+    var: service
+
+- name: docker-service.exec|fact append result
+  vars:
+    item:
+      share: "{{ service_share }}"
+      param: "{{ service }}"
+      index: "{{ service_index | default('') }}"
+  ansible.builtin.set_fact:
+    test_append_result: "{{ test_append_result | default([]) + [item] }}"
+
+- name: docker-service.exec|fact include count
+  run_once: true
+  ansible.builtin.set_fact:
+    test_include_count: "{{ test_include_count | default(0) | int + 1 }}"
