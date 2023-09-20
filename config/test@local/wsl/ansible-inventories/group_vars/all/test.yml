@@ -5,6 +5,7 @@ workspace:
     - sshpass
     - rsync
     - git
+    - jq
   pip:
     - jsondiff==2.0.0
     - jmespath==1.0.1
