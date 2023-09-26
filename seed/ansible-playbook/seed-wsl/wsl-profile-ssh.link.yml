@@ -1,0 +1,10 @@
+#!/usr/bin/env -S ansible-playbook -K -i ${PWD}/ansible-inventories
+# code: language=ansible
+---
+
+- name: link
+  hosts: wsl
+  tasks:
+
+    - name: link wsl profile ssh
+      include_tasks: ../../ansible-tasks/seed-wsl/wsl-profile-ssh.link.yml
