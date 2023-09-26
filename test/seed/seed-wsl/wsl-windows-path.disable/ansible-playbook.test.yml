@@ -2,7 +2,7 @@
 # code: language=ansible
 ---
 
-- import_playbook: wsl-automount.test.yml
+- import_playbook: wsl-windowspath.test.yml
 
 - name: test
   hosts: localhost
