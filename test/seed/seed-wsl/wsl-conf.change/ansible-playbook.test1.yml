@@ -1,0 +1,29 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -K -i ${PWD}/../../test@local/wsl/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: wsl
+  tasks:
+
+    - name: 1|change wsl conf
+      vars:
+        conf:
+          list:
+            - section: interop
+              option: appendWindowsPath
+              value: 'false'
+          shutdown: true
+      include_tasks: wsl-conf.test.yml
+
+    - name: 1|searching result
+      loop:
+        - '[interop]'
+        - 'appendWindowsPath = false'
+      ansible.builtin.lineinfile:
+        path: /etc/wsl.conf
+        line: "{{ item }}"
+        state: present
+      check_mode: yes
+      register: results_config
+      failed_when: results_config is changed
