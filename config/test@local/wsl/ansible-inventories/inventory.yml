@@ -5,12 +5,9 @@ all:
     # fix inventory_dir is undefined https://github.com/ansible/ansible/issues/31087
     localhost:
       ansible_connection: local
+      ansible_python_interpreter: /usr/bin/python3
 
   children:
-    ssh:
-      hosts:
-        localhost:
-
-    docker:
+    wsl:
       hosts:
         localhost:
