@@ -2,23 +2,10 @@
 
 set -e
 
-if [[ -z "$( command -v wslpath )" ]] || [[ -z "$( command -v wslvar )" ]];
+if [[ -z "$( command -v wslvar )" ]];
 then
     echo "Install wslu"
-
-    sudo apt install -y apt-transport-https wget
-    wget -O - https://pkg.wslutiliti.es/public.key | sudo tee -a /etc/apt/trusted.gpg.d/wslu.asc
-
-    os_name="$( env -i bash -c '. /etc/os-release ; echo $NAME' )"
-    if [[ "$os_name" == *"Debian"* ]];
-    then
-        echo "Debian detected. add pkg.wslutiliti.es apt source"
-        os_version_codename="$( env -i bash -c '. /etc/os-release ; echo $VERSION_CODENAME' )"
-        echo "deb https://pkg.wslutiliti.es/debian $os_version_codename main" | sudo tee -a /etc/apt/sources.list
-        sudo apt update
-    fi
-
-    sudo apt install -y wslu
+    curl -sL https://raw.githubusercontent.com/wslutilities/wslu/master/extras/scripts/wslu-install | bash
 fi
 
 win_userprofile="$( wslvar USERPROFILE )"
