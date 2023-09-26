@@ -11,6 +11,7 @@
 
   - name: wsl-profile-ssh.test|check command
     ansible.builtin.shell: "command -v wslvar"
+    ignore_errors: true
     register: check_command
 
   - when: check_command.stdout | default(None,true) == None
