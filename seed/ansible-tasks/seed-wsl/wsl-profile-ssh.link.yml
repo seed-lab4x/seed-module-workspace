@@ -1,0 +1,120 @@
+# code: language=ansible
+---
+
+- block:
+  - name: wsl-profile-ssh.link|assert wsl
+    ansible.builtin.assert:
+      that:
+        - ansible_env.WSL_DISTRO_NAME is defined
+      msg: "not in wsl"
+      quiet: true
+
+  - name: wsl-profile-ssh.link|check command
+    ansible.builtin.shell: "command -v wslvar"
+    register: check_command
+
+  - when: check_command.stdout | default(None,true) == None
+    block:
+    - name: wsl-profile-ssh.link|install|download get wslu
+      ansible.builtin.get_url:
+        url: "https://raw.githubusercontent.com/wslutilities/wslu/master/extras/scripts/wslu-install"
+        dest: "~/get-wslu.sh"
+      register: get_url
+
+    - name: wsl-profile-ssh.link|install|shell get wslu
+      become: true
+      ansible.builtin.shell: "bash {{ get_url.dest }}"
+      register: get_wslu
+      ignore_errors: true
+
+    - name: wsl-profile-ssh.link|install|print get wslu
+      vars:
+        wsl_hostvars: "{{ hostvars | dict2items
+          | selectattr('key','in',groups['wsl'])
+          | selectattr('value.get_wslu','defined') }}"
+      ansible.builtin.pause:
+        seconds: 1
+        prompt: |
+          {% for host in wsl_hostvars %}
+
+          [{{ host.key }}] =>
+          --------------------------------------------------
+          {{ host.value.get_wslu.stdout | default('',true) }}
+          {% endfor %}
+
+  - name: wsl-profile-ssh.link|get userprofile
+    ansible.builtin.command: "wslvar USERPROFILE"
+    register: get_userprofile
+
+  - name: wsl-profile-ssh.link|get username
+    ansible.builtin.command: "wslvar USERNAME"
+    register: get_username
+
+  - name: wsl-profile-ssh.link|fact param
+    vars:
+      username: "{{ get_username.stdout }}"
+    ansible.builtin.set_fact:
+      _ssh:
+        win_profile: "{{ get_userprofile.stdout | replace(username,'') }}"
+        wsl_profile: "/mnt/metadata/profile"
+        wsl_ssh: "/mnt/metadata/profile/{{ username }}/.ssh"
+        usr_ssh: "{{ ansible_env.HOME }}/.ssh"
+
+  - name: wsl-profile-ssh.link|mount profile
+    become: true
+    ansible.posix.mount:
+      state: mounted
+      fstype: drvfs
+      src: "{{ _ssh.win_profile }}"
+      path: "{{ _ssh.wsl_profile }}"
+      opts: "metadata"
+    register: mount_profile
+    until: mount_profile is succeeded
+
+  - name: wsl-profile-ssh.link|stat ssh
+    ansible.builtin.stat:
+      path: "{{ _ssh.usr_ssh }}"
+    register: stat_ssh
+
+  - when:
+      - stat_ssh.stat.exists
+      - not stat_ssh.stat.islnk
+    block:
+    - name: wsl-profile-ssh.link|backup exists
+      ansible.builtin.copy:
+        src: "{{ _ssh.usr_ssh }}"
+        dest: "{{ _ssh.usr_ssh }}.bak.{{ ansible_date_time.epoch }}"
+
+    - name: wsl-profile-ssh.link|remove exists
+      ansible.builtin.file:
+        state: absent
+        path: "{{ _ssh.usr_ssh }}"
+
+  - name: wsl-profile-ssh.link|link ssh
+    ansible.builtin.file:
+      src: "{{ _ssh.wsl_ssh }}"
+      dest: "{{ _ssh.usr_ssh }}"
+      state: link
+
+  - name: wsl-profile-ssh.link|list ssh
+    ansible.builtin.command: "ls -la {{ _ssh.usr_ssh }}/"
+    register: list_ssh
+
+  - name: wsl-profile-ssh.link|unfact param
+    ansible.builtin.set_fact:
+      _ssh: !!null
+
+  - name: wsl-profile-ssh.link|print ssh
+    vars:
+      wsl_hostvars: "{{ hostvars | dict2items
+        | selectattr('key','in',groups['wsl'])
+        | selectattr('value.list_ssh','defined') }}"
+    ansible.builtin.pause:
+      seconds: 1
+      prompt: |
+        {% for host in wsl_hostvars %}
+
+        [{{ host.key }}] =>
+        --------------------------------------------------
+        {{ host.value.list_ssh.stdout | default('',true) }}
+        {% endfor %}
