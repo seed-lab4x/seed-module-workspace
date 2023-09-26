@@ -6,7 +6,7 @@
   hosts: wsl
   tasks:
 
-    - name: inventory var|init workspace
+    - name: inventory var|link ssh
       include_tasks: wsl-profile-ssh.test.yml
 
     - name: 0|assert results
