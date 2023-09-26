@@ -33,12 +33,12 @@
 - run_once: true
   delegate_to: localhost
   block:
-  - name: seed-ssh.init|create directory for keypair
+  - name: seed-ssh.init|keypair|mkdir
     ansible.builtin.file:
       state: directory
       path: "{{ _ssh.keypair_dir }}"
 
-  - name: seed-ssh.init|generate rsa 2048 keypair
+  - name: seed-ssh.init|keypair|generate rsa 2048
     community.crypto.openssh_keypair:
       path: "{{ _ssh.keypair_path }}"
       size: 2048
@@ -49,39 +49,15 @@
     register: generate_keypair
     until: generate_keypair is succeeded
 
-- block:
-  - name: seed-ssh.init|comment start for known_hosts
-    run_once: true
-    delegate_to: localhost
-    ansible.builtin.lineinfile:
-      path: "~/.ssh/known_hosts"
-      line: "# seed-ssh.init/approve '{{ _ssh.name }}' {{ _ssh.mark_comment }} start"
-      create: true
-
-  - name: seed-ssh.init|approve ssh
-    include_tasks: "{{ _ssh.approve_task }}"
-    vars:
-      ssh: "{{ _ssh }}"
-
-  - name: seed-ssh.init|comment end for known_hosts
-    run_once: true
-    delegate_to: localhost
-    ansible.builtin.lineinfile:
-      path: "~/.ssh/known_hosts"
-      line: "# seed-ssh.init/approve '{{ _ssh.name }}' {{ _ssh.mark_comment }} end"
-      create: true
-
-- run_once: true
-  delegate_to: localhost
-  when: _ssh.known_scan | length > 0
-  block:
-  - name: seed-ssh.init|comment start for known_hosts
+  - name: seed-ssh.init|known_hosts|mark start
     ansible.builtin.lineinfile:
       path: "{{ _ssh.known_path }}"
-      line: "# seed-ssh.init '{{ _ssh.name }}' {{ _ssh.mark_comment }} start"
+      line:  |-
+
+        # seed-ssh.init '{{ _ssh.name }}' {{ _ssh.mark_comment }} start
       create: true
 
-  - name: seed-ssh.init|loop ansible hosts fingerprint ssh known_hosts
+  - name: seed-ssh.init|known_hosts|loop add by keyscan
     vars:
       list_host_scan: "{{ groups[_ssh.group]
           | product(_ssh.known_scan)
@@ -95,34 +71,49 @@
       item_known_name: "{{ item_keyscan_host }}"
       item_keyscan_command: "ssh-keyscan -t {{ item_keyscan_type }} -p {{ item_keyscan_port }} {{ item_keyscan_host }}"
       name: "{{ item.value.inventory_hostname }}"
+      item_key: "{{ lookup('pipe', item_keyscan_command, errors='ignore') }}"
     loop: "{{ list_host_scan }}"
     loop_control:
       loop_var: item_host_scan
+    when:
+      - item_key | default(None,true) != None
     ansible.builtin.known_hosts:
       state: present
       path: "{{ _ssh.known_path }}"
       hash_host: "{{ _ssh.known_hash }}"
       name: "{{ item_known_name }}"
-      key: "{{ lookup('pipe', item_keyscan_command) }}"
+      key: "{{ item_key }}"
+    register: knowned_host
+    until: knowned_host is succeeded
     ignore_errors: yes
 
-  - name: seed-ssh.init|comment end for known_hosts
-    ansible.builtin.lineinfile:
-      path: "{{ _ssh.known_path }}"
-      line: "# seed-ssh.init '{{ _ssh.name }}' {{ _ssh.mark_comment }} end"
-      create: true
+- block:
+  - name: seed-ssh.init|approve|include tasks
+    include_tasks: "{{ _ssh.approve_task }}"
+    vars:
+      ssh: "{{ _ssh }}"
 
 - run_once: true
   delegate_to: localhost
   when: _ssh.config_path | default(None,true) != None
   block:
-  - name: seed-ssh.init|comment start for config
+  - name: seed-ssh.init|known_hosts|mark end
+    run_once: true
+    delegate_to: localhost
     ansible.builtin.lineinfile:
-      path: "{{ _ssh.config_path }}"
-      line: "# seed-ssh.init '{{ _ssh.name }}' {{ _ssh.mark_comment }} start"
+      path: "~/.ssh/known_hosts"
+      line: "# seed-ssh.init '{{ _ssh.name }}' {{ _ssh.mark_comment }} end"
       create: true
 
-  - name: seed-ssh.init|loop ansible hosts configure ssh config
+  - name: seed-ssh.init|config|mark start
+    ansible.builtin.lineinfile:
+      path: "{{ _ssh.config_path }}"
+      line: |-
+
+        # seed-ssh.init '{{ _ssh.name }}' {{ _ssh.mark_comment }} start
+      create: true
+
+  - name: seed-ssh.init|config|loop add by fact
     vars:
       item_host: "{{ hostvars[host_name].ansible_host | default(host_name,true) }}"
       item_port: "{{ hostvars[host_name].ansible_port | default('',true) }}"
@@ -140,7 +131,7 @@
       identity_file: "{{ _ssh.keypair_path }}"
     ignore_errors: yes
 
-  - name: seed-ssh.init|comment end for config
+  - name: seed-ssh.init|config|mark end
     ansible.builtin.lineinfile:
       path: "{{ _ssh.config_path }}"
       line: "# seed-ssh.init '{{ _ssh.name }}' {{ _ssh.mark_comment }} end"
