@@ -1,0 +1,31 @@
+version: "3.8"
+
+volumes:
+  main-vol:
+
+networks:
+  main-net:
+
+secrets:
+  main-sec:
+    file: ./secret_data
+
+configs:
+  main-cfg:
+    file: ./config_data
+
+services:
+  main:
+    image: alpine:3.18
+    command: "echo 'hello main'"
+    configs:
+      - source: main-cfg
+        target: /main/main.conf
+    secrets:
+      - main-sec
+    volumes:
+      - type: volume
+        source: main-vol
+        target: /main
+    networks:
+      - main-net

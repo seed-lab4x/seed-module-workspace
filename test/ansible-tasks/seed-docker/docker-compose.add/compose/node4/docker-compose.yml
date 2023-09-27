@@ -1,0 +1,18 @@
+version: "3.8"
+
+volumes:
+  main-vol:
+
+networks:
+  main-net:
+
+services:
+  main:
+    image: alpine:3.18
+    command: "echo 'hello main node4'"
+    volumes:
+      - type: volume
+        source: main-vol
+        target: /main
+    networks:
+      - main-net
