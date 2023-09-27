@@ -1,0 +1,32 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/3nfs/ansible-inventories
+# code: language=ansible
+---
+
+- name: init|local
+  hosts: localhost
+  connection: local
+  tasks:
+
+    - name: init|mkdir build path
+      ansible.builtin.file:
+        state: directory
+        path: "{{ playbook_dir }}/build"
+
+    - name: init|add empty network
+      community.docker.docker_network:
+        name: "test-network-wait-empty"
+
+    - name: init|add local network
+      community.docker.docker_network:
+        name: "test-network-wait-local"
+
+    - name: init|add local container
+      community.docker.docker_container:
+        detach: true
+        name: "test-network-wait-local"
+        image: istio/tcp-echo-server:1.2
+        networks:
+          - name: "test-network-wait-local"
+        ports:
+          - "9000:9000"
+          - "9001:9000"
