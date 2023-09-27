@@ -1,0 +1,98 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/4docker/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: docker
+  tasks:
+
+    - name: playbook var|all host|push compose string dest
+      include_tasks: docker-compose.test.yml
+      vars:
+        compose:
+          dest: "{{ workspace.remote }}/test-from-playbook_0.compose.yml"
+          content: |
+            version: "3.8"
+            services:
+              playbook_0:
+                image: alpine:3.18
+                command: "tail -f /dev/null"
+
+    - name: playbook var|all host|info compose string dest
+      ansible.builtin.stat:
+        path: "{{ workspace.remote }}/test-from-playbook_0.compose.yml"
+      register: file_stat
+
+    - name: playbook var|all host|assert compose string dest
+      vars:
+        file_content: "{{ lookup('file',file_stat.stat.path) }}"
+      ansible.builtin.assert:
+        that:
+          - file_stat.stat.exists
+          - file_stat.stat.path | basename == 'test-from-playbook_0.compose.yml'
+          - not file_stat.stat.isdir
+          - file_content is contains('playbook_0')
+
+
+    - name: playbook var|all host|push compose temp dest
+      include_tasks: docker-compose.test.yml
+      vars:
+        workpath:
+          remote:
+            full: "{{ playbook_dir }}/build/{{ inventory_hostname }}"
+        compose:
+          dest: "{{ workspace.remote }}/test-from-playbook_1.compose.yml"
+          template: "{{ playbook_dir }}/template/playbook_1.compose.yml"
+
+    - name: playbook var|all host|info compose temp dest
+      ansible.builtin.stat:
+        path: "{{ workspace.remote }}/test-from-playbook_1.compose.yml"
+      register: file_stat
+
+    - name: playbook var|all host|assert compose temp dest
+      vars:
+        file_content: "{{ lookup('file',file_stat.stat.path) }}"
+      ansible.builtin.assert:
+        that:
+          - file_stat.stat.exists
+          - file_stat.stat.path | basename == 'test-from-playbook_1.compose.yml'
+          - not file_stat.stat.isdir
+          - file_content is contains('playbook_1')
+
+
+    - name: playbook var|any|push compose temp file
+      include_tasks: docker-compose.test.yml
+      vars:
+        workpath:
+          remote:
+            full: "{{ playbook_dir }}/build/{{ inventory_hostname }}"
+        compose_share:
+          any: true
+          group: docker-34
+        compose:
+          file: "test-from-playbook_2.compose.yml"
+          template: "{{ playbook_dir }}/template/playbook_2.compose.yml.j2{{  '' if(inventory_hostname == 'node3') else 'none' }}"
+          vars:
+            COMMAND: "echo 'hello {{ inventory_hostname }} test-from-playbook_2'"
+
+    - name: playbook var|any|info compose temp file
+      ansible.builtin.stat:
+        path: "{{ workspace.remote }}/test-from-playbook_2.compose.yml"
+      register: file_stat
+
+    - name: playbook var|any|assert compose temp file host node3
+      when: inventory_hostname == 'node3'
+      vars:
+        file_content: "{{ lookup('file',file_stat.stat.path) }}"
+      ansible.builtin.assert:
+        that:
+          - file_stat.stat.exists
+          - file_stat.stat.path | basename == 'test-from-playbook_2.compose.yml'
+          - not file_stat.stat.isdir
+          - file_content is contains('playbook_2')
+
+    - name: playbook var|any|assert compose temp file host node4
+      when: inventory_hostname == 'node4'
+      ansible.builtin.assert:
+        that:
+          - not file_stat.stat.exists
