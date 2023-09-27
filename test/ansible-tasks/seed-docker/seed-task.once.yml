@@ -10,6 +10,8 @@
         replace: ../seed-docker/docker-volumes.push/docker-volume.push.yml
       - search: seed-docker/docker-network.add.yml
         replace: ../seed-docker/docker-networks.add/docker-network.add.yml
+      - search: seed-docker/docker-network.wait.yml
+        replace: ../seed-docker/docker-networks.wait/docker-network.wait.yml
   ansible.builtin.set_fact:
     _task_share:
       run_once: "{{ task_share.run_once }}"
