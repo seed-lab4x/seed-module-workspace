@@ -1,0 +1,68 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/2ssh/ansible-inventories
+# code: language=ansible
+---
+
+- name: init|local
+  hosts: localhost
+  connection: local
+  tasks:
+
+    - name: init|mkdir ssh_dir
+      ansible.builtin.file:
+        state: directory
+        path: "{{ ssh_dir }}/test-ssh-approve"
+
+    - name: init|backup known_hosts
+      ansible.builtin.copy:
+        src: "~/.ssh/known_hosts"
+        dest: "{{ ssh_dir }}/known_hosts.bak"
+      register: known_backup
+
+    - name: init|generate rsa 2048 keypair
+      community.crypto.openssh_keypair:
+        path: "{{ ssh_dir }}/test-ssh-approve/id_rsa"
+        size: 2048
+        type: rsa
+        comment: "test"
+        mode: 0700
+      # https://github.com/microsoft/WSL/issues/670
+      register: keypair_generate
+      until: keypair_generate is succeeded
+
+    - name: init|add ssh-server
+      loop: "{{ groups['ssh'] }}"
+      loop_control:
+        loop_var: host_name
+      community.docker.docker_container:
+        detach: true
+        name: "test-ssh-approve-{{ host_name }}"
+        image: linuxserver/openssh-server:version-9.3_p2-r0
+        ports:
+          - "{{ hostvars[host_name].ansible_port }}:2222"
+        env:
+          SUDO_ACCESS: "true"
+          PASSWORD_ACCESS: "true"
+          USER_PASSWORD: "seed"
+          USER_NAME: "seed"
+      register: server_add
+      until: server_add is succeeded
+
+    - name: init|apk ssh-server
+      loop: "{{ groups['ssh'] }}"
+      loop_control:
+        loop_var: host_name
+      community.docker.docker_container_exec:
+        container: "test-ssh-approve-{{ host_name }}"
+        command: "{{ alpine_command }}"
+      register: server_apk
+      until: server_apk is succeeded
+
+    - name: init|python ssh-server
+      loop: "{{ groups['ssh'] }}"
+      loop_control:
+        loop_var: host_name
+      community.docker.docker_container_exec:
+        container: "test-ssh-approve-{{ host_name }}"
+        command: "apk add python3"
+      register: server_python
+      until: server_python is succeeded
