@@ -1,3 +1,5 @@
 # code: language=ansible
 
 host_path: "{{ inventory_dir }}/../"
+
+host_name: "{{ 'docker-desktop' if(ansible_facts.env.WSL_DISTRO_NAME is defined) else ansible_facts.hostname }}"
