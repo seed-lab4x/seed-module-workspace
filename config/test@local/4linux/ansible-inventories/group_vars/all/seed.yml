@@ -19,6 +19,9 @@ workspace:
   remote: "{{ playbook_dir }}/build/{{ inventory_hostname }}"
   unknow: "no change fact attribute defined by inventory {{ inventory_hostname }}"
 
+workpath:
+  index: -2
+  unknow: "no change fact attribute defined by inventory {{ inventory_hostname }}"
 
 ssh:
   name: none

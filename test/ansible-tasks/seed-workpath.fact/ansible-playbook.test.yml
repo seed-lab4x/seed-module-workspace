@@ -1,0 +1,65 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/4linux/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  vars:
+  hosts: all
+  pre_tasks:
+
+    - name: init|fact workspace
+      include_tasks: ../seed-workspace.fact/seed-workspace.test.yml
+
+  tasks:
+
+    - name: inventory var|fact workpath
+      include_tasks: seed-workpath.test.yml
+
+    - name: inventory var|assert results
+      ansible.builtin.assert:
+        that:
+          - workpath.name == 'ansible-tasks'
+          - workpath.local.full == playbook_dir | realpath
+          - workpath.local.name == playbook_dir | realpath | dirname
+          - workpath.local.parent == playbook_dir | realpath | dirname | dirname
+          - workpath.remote.full == workspace.remote + '/test/ansible-tasks/seed-workpath.fact'
+          - workpath.remote.name == workspace.remote + '/test/ansible-tasks/seed-workpath.fact' | dirname
+          - workpath.remote.parent == workspace.remote + '/test/ansible-tasks/seed-workpath.fact' | dirname | dirname
+
+
+    - name: playbook var|fact workpath
+      include_tasks: seed-workpath.test.yml
+      vars:
+        workpath:
+          path: "{{ playbook_dir }}/../"
+          index: -2
+          length: 2
+          delimiter: '.'
+
+    - name: playbook var|assert results
+      ansible.builtin.assert:
+        that:
+          - workpath.name == 'test.ansible-tasks'
+          - workpath.local.full == playbook_dir | realpath | dirname
+          - workpath.local.name == playbook_dir | realpath | dirname
+          - workpath.local.parent == playbook_dir | realpath | dirname | dirname | dirname
+          - workpath.remote.full == workspace.remote + '/test/ansible-tasks'
+          - workpath.remote.name == workspace.remote + '/test/ansible-tasks'
+          - workpath.remote.parent == workspace.remote
+
+
+    - name: null var|fact workpath
+      include_tasks: seed-workpath.test.yml
+      vars:
+        workpath: !!null
+
+    - name: null var|assert results
+      ansible.builtin.assert:
+        that:
+          - workpath.name == 'seed-workpath.fact'
+          - workpath.local.full == playbook_dir | realpath
+          - workpath.local.name == playbook_dir | realpath
+          - workpath.local.parent == playbook_dir | realpath | dirname
+          - workpath.remote.full == workspace.remote + '/test/ansible-tasks/seed-workpath.fact'
+          - workpath.remote.name == workspace.remote + '/test/ansible-tasks/seed-workpath.fact'
+          - workpath.remote.parent == workspace.remote + '/test/ansible-tasks'
