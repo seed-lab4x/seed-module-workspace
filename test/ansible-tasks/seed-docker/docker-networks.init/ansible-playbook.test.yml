@@ -1,0 +1,102 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/4docker/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: docker
+  tasks:
+
+    - name: playbook var|index loop|init networks
+      include_tasks: docker-networks.test.yml
+      vars:
+        networks:
+          - name: "test-init-{{ inventory_hostname }}-playbook_0"
+            labels:
+              from: playbook_0
+            wait:
+              hosts:
+                - host: "test-wait-{{ inventory_hostname }}-playbook_0"
+                  port: 9000
+              retries: 10
+              delay: 10
+          - group: docker-34
+            name: "test-init-{{ inventory_hostname }}-playbook_1"
+            labels:
+              from: playbook_1
+            wait:
+              hosts:
+                - host: "test-wait-{{ inventory_hostname }}-playbook_1"
+                  port: 9000
+                - host: "test-wait-{{ inventory_hostname }}-playbook_1"
+                  port: 9001
+              retries: 10
+              delay: 10
+
+    - name: playbook var|index loop|assert networks
+      ansible.builtin.assert:
+        that:
+          - add_result.param | length == 2
+          - add_result.param[0].labels.from is contains('playbook_0')
+          - add_result.param[1].labels.from is contains('playbook_1')
+          - wait_result.param | length == 2
+          - wait_result.param[0].hosts[0].host is contains('playbook_0')
+          - wait_result.param[1].hosts[0].host is contains('playbook_1')
+          - wait_result.param[1].hosts[1].host is contains('playbook_1')
+
+    - name: playbook var|index loop|clean test
+      ansible.builtin.set_fact:
+        add_result: !!null
+        wait_result: !!null
+
+
+    - name: playbook var|value loop|init networks
+      include_tasks: docker-networks.test.yml
+      vars:
+        networks_share:
+          mode: value
+          group: docker-manager
+        networks:
+          - any: true
+            name: "test-add-any-playbook_4"
+            labels:
+              from: playbook_4
+            wait:
+              any: true
+              hosts:
+                - host: "test-wait-any-playbook_4"
+                  port: 9000
+                - host: "test-wait-any-playbook_4"
+                  port: 9001
+              retries: 10
+              delay: 10
+
+    - name: playbook var|value loop|assert networks host node1
+      when: inventory_hostname == 'node1'
+      ansible.builtin.assert:
+        that:
+          - add_result.param | length == 1
+          - add_result.param[0].labels.from is contains('playbook_4')
+          - add_result.param[0].any == true
+          - wait_result.param | length == 1
+          - wait_result.share.mode == 'value'
+          - wait_result.param[0].hosts[0].host is contains('playbook_4')
+          - wait_result.param[0].hosts[1].host is contains('playbook_4')
+          - wait_result.param[0].any == true
+
+    - name: playbook var|value loop|assert networks host node3
+      when: inventory_hostname == 'node3'
+      ansible.builtin.assert:
+        that:
+          - add_result.param | length == 1
+          - add_result.param[0].labels.from is contains('playbook_4')
+          - add_result.param[0].any == true
+          - wait_result.param | length == 1
+          - wait_result.share.mode == 'value'
+          - wait_result.param[0].hosts[0].host is contains('playbook_4')
+          - wait_result.param[0].hosts[1].host is contains('playbook_4')
+          - wait_result.param[0].any == true
+
+    - name: playbook var|value loop|clean test
+      ansible.builtin.set_fact:
+        add_result: !!null
+        wait_result: !!null

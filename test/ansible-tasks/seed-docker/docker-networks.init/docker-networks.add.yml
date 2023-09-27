@@ -1,0 +1,19 @@
+# code: language=ansible
+---
+
+- name: docker-networks.add|debug share
+  run_once: true
+  ansible.builtin.debug:
+    var: networks_share
+
+- name: docker-networks.add|debug param
+  ansible.builtin.debug:
+    var: networks
+
+- name: docker-networks.add|fact result
+  vars:
+    result:
+      share: "{{ networks_share | default('',true) }}"
+      param: "{{ networks }}"
+  ansible.builtin.set_fact:
+    add_result: "{{ result }}"
