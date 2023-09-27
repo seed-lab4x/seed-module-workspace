@@ -1,0 +1,19 @@
+# code: language=ansible
+---
+
+- name: docker-volumes.push|debug share
+  run_once: true
+  ansible.builtin.debug:
+    var: volumes_share
+
+- name: docker-volumes.push|debug param
+  ansible.builtin.debug:
+    var: volumes
+
+- name: docker-volumes.push|fact result
+  vars:
+    result:
+      share: "{{ volumes_share | default('',true) }}"
+      param: "{{ volumes }}"
+  ansible.builtin.set_fact:
+    push_result: "{{ result }}"
