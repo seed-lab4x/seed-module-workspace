@@ -1,0 +1,80 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -K -i ${PWD}/../../test@local/4docker/ansible-inventories
+# code: language=ansible
+---
+
+- name: init|remote
+  hosts: docker
+  tasks:
+
+    - name: init|add network
+      community.docker.docker_network:
+        name: test-deploy-{{ inventory_hostname }}-playbook_4
+        attachable: true
+
+
+- name: init|local
+  hosts: localhost
+  connection: local
+  tasks:
+
+    - name: init|add network container
+      community.docker.docker_container:
+        detach: true
+        name: test-deploy-network-init
+        image: istio/tcp-echo-server:1.2
+        networks:
+          - name: test-deploy-node1-playbook_4
+          - name: test-deploy-node2-playbook_4
+          - name: test-deploy-node3-playbook_4
+          - name: test-deploy-node4-playbook_4
+        ports:
+          - "9000"
+
+    - name: init|mkdir exports path
+      ansible.builtin.file:
+        state: directory
+        path: "{{ playbook_dir }}/build"
+
+    - name: init|create exports file
+      ansible.builtin.copy:
+        dest: "{{ playbook_dir }}/build/exports"
+        content: |
+          /data        *(fsid=0,rw,no_root_squash,no_subtree_check,insecure)
+
+    - name: init|add nfs-volume
+      community.docker.docker_volume:
+        name: test-deploy-mount-init
+
+    - name: init|add nfs-server
+      community.docker.docker_container:
+        detach: true
+        name: test-deploy-mount-init
+        image: erichough/nfs-server:2.2.1
+        env:
+          TZ: Asia/Hong_Kong
+          NFS_LOG_LEVEL: DEBUG
+          NFS_DISABLE_VERSION_3: 'true'
+        volumes:
+          - "{{ playbook_dir }}/build/exports:/etc/exports"
+          - test-deploy-mount-init:/data
+          - /lib/modules:/lib/modules:ro
+        capabilities:
+          - SYS_ADMIN
+          - SYS_MODULE
+          - CAP_SYS_ADMIN
+        ports:
+          - "2049:2049"
+          - "2049:2049/udp"
+        user: root
+        privileged: true
+
+    - name: init|mkdir build
+      ansible.builtin.file:
+        state: directory
+        path: "{{ playbook_dir }}/build"
+
+    - name: init|backup fstab
+      become: true
+      ansible.builtin.copy:
+        src: "/etc/fstab"
+        dest: "{{ playbook_dir }}/build/fstab.bak"
