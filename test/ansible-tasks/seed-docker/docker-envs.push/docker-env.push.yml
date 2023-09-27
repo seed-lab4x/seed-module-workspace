@@ -1,0 +1,25 @@
+# code: language=ansible
+---
+
+- name: docker-env.push|debug share
+  run_once: true
+  ansible.builtin.debug:
+    var: env_share
+
+- name: docker-env.push|debug param
+  ansible.builtin.debug:
+    var: env
+
+- name: docker-env.push|fact append result
+  vars:
+    item:
+      share: "{{ env_share }}"
+      param: "{{ env }}"
+      index: "{{ env_index | default('') }}"
+  ansible.builtin.set_fact:
+    test_append_result: "{{ test_append_result | default([]) + [item] }}"
+
+- name: docker-env.push|fact include count
+  run_once: true
+  ansible.builtin.set_fact:
+    test_include_count: "{{ test_include_count | default(0) | int + 1 }}"
