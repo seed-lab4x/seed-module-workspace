@@ -38,6 +38,8 @@
           replace: ../seed-docker/docker-composes.push/docker-compose.push.yml
         - search: seed-docker/docker-container.wait.yml
           replace: ../seed-docker/docker-containers.wait/docker-container.wait.yml
+        - search: seed-docker/docker-container.exec.yml
+          replace: ../seed-docker/docker-containers.exec/docker-container.exec.yml
     run_once: true
     ansible.builtin.set_fact:
       _task_share:
