@@ -1,0 +1,4 @@
+# code: language=ansible
+---
+
+- include_tasks: ../seed-task.once/seed-task.test.yml
