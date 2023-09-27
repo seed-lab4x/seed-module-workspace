@@ -1,0 +1,57 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/4docker/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: docker
+  tasks:
+
+    - name: playbook var|fact workspace
+      include_tasks: "{{ workspace.local }}/seed/ansible-tasks/seed-workspace.fact.yml"
+
+    - name: playbook var|fact workpath
+      include_tasks: "{{ workspace.local }}/{{ workspace.seedpath }}/ansible-tasks/seed-workpath.fact.yml"
+      vars:
+        workpath:
+          path: "{{ workspace.local }}/playbook_2"
+
+
+    - name: playbook var|all host|change path|deploy compose
+      include_tasks: docker-compose.test.yml
+      vars:
+        compose:
+          name: "test-deploy-{{ inventory_hostname }}-playbook_2"
+          path: "{{ workspace.remote }}/playbook_2"
+          vars: {}
+          default:
+            files:
+              - dest: "{{ workspace.remote }}/playbook_2"
+            composes:
+              - file: "test-deploy-playbook_2.compose.yml"
+                content: |
+                  version: "3.8"
+                  services:
+                    playbook_2:
+                      image: alpine:3.18
+                      command: "tail -f /dev/null"
+
+    - name: playbook var|all host|change path|info container
+      community.docker.docker_container_info:
+        name: "test-deploy-{{ inventory_hostname }}-playbook_2_playbook_2_1"
+      register: container_info
+
+    - name: playbook var|all host|change path|assert compose
+      ansible.builtin.assert:
+        that:
+          - container_info.container.Name is contains(inventory_hostname)
+          - container_info.container.Name is contains('playbook_2')
+
+    - name: playbook var|all host|change path|remove compose
+      community.docker.docker_compose:
+        state: absent
+        project_name: "test-deploy-{{ inventory_hostname }}-playbook_2"
+        project_src: "{{ workpath.remote.full }}"
+        files:
+          - "test-deploy-playbook_2.compose.yml"
+        # remove vol
+        remove_volumes: true
