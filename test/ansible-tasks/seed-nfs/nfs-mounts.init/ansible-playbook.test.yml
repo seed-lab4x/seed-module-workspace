@@ -1,0 +1,113 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/3nfs/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: nfs-client
+  tasks:
+
+    - name: playbook var|index loop|init mounts
+      include_tasks: nfs-mounts.test.yml
+      vars:
+        mounts:
+          - nfs:
+              src: "localhost:/"
+              opts: "vers=4,loud,rw,sync"
+            push:
+              - src: "{{ playbook_dir }}/file/file"
+                dest: "{{ inventory_hostname }}/test-from-playbook_0/file"
+          - nfs:
+              src: "localhost:/"
+              path: "{{ playbook_dir }}/build/data"
+              opts: "vers=4,loud,rw,sync"
+            wait:
+              until:
+                - mount_nfs is succeeded
+            push:
+              - src: "{{ playbook_dir }}/file/file"
+                dest: "{{ inventory_hostname }}/test-from-playbook_1/file.copy"
+              - src: "{{ playbook_dir }}/file/dir/"
+                dest: "{{ inventory_hostname }}/test-from-playbook_2/dir.copy"
+              - dest: "{{ inventory_hostname }}/test-from-playbook_3/dir.mkdir"
+
+    - name: playbook var|index loop|assert mounts
+      ansible.builtin.assert:
+        that:
+          - wait_result.param | length == 2
+          - wait_result.param[0].nfs.path is undefined
+          - wait_result.param[0].until is undefined
+          - wait_result.param[1].nfs.path is defined
+          - wait_result.param[1].until is defined
+          - push_result.param | length == 4
+          - push_result.param[0].nfs.path is undefined
+          - push_result.param[0].dest is contains('playbook_0')
+          - push_result.param[1].nfs.path is defined
+          - push_result.param[1].dest is contains('playbook_1')
+          - push_result.param[2].nfs.path is defined
+          - push_result.param[2].dest is contains('playbook_2')
+          - push_result.param[3].nfs.path is defined
+          - push_result.param[3].dest is contains('playbook_3')
+
+    - name: playbook var|index loop|clean test
+      ansible.builtin.set_fact:
+        wait_result: !!null
+        push_result: !!null
+
+
+    - name: playbook var|value loop|init mounts
+      include_tasks: nfs-mounts.test.yml
+      vars:
+        mounts_share:
+          mode: value
+          group: nfs-23
+        mounts:
+          - any: true
+            nfs:
+              src: "localhost:/"
+              path: "{{ playbook_dir }}/build/data"
+              opts: "vers=4,loud,rw,sync"
+            wait:
+              until:
+                - mount_nfs is succeeded
+            push:
+              - any: false
+                src: "{{ playbook_dir }}/file/file"
+                dest: "{{ inventory_hostname }}/test-from-playbook_4/"
+              - any: true
+                src: "{{ playbook_dir }}/file/file"
+                dest: "any/test-from-playbook_5/"
+
+    - name: playbook var|value loop|assert mounts host node2
+      when: inventory_hostname == 'node2'
+      ansible.builtin.assert:
+        that:
+          - wait_result.param | length == 1
+          - wait_result.param[0].any == true
+          - push_result.param | length == 2
+          - push_result.share.mode == 'value'
+          - push_result.param[0].dest is contains('test-from-playbook_4')
+          - push_result.param[0].dest is contains(inventory_hostname)
+          - push_result.param[0].any == false
+          - push_result.param[1].dest is contains('test-from-playbook_5')
+          - push_result.param[1].dest is contains('any')
+          - push_result.param[1].any == true
+
+    - name: playbook var|value loop|assert mounts host node3
+      when: inventory_hostname == 'node3'
+      ansible.builtin.assert:
+        that:
+          - wait_result.param | length == 1
+          - wait_result.param[0].any == true
+          - push_result.param | length == 2
+          - push_result.share.mode == 'value'
+          - push_result.param[0].dest is contains('test-from-playbook_4')
+          - push_result.param[0].dest is contains(inventory_hostname)
+          - push_result.param[0].any == false
+          - push_result.param[1].dest is contains('test-from-playbook_5')
+          - push_result.param[1].dest is contains('any')
+          - push_result.param[1].any == true
+
+    - name: playbook var|value loop|clean test
+      ansible.builtin.set_fact:
+        wait_result: !!null
+        push_result: !!null
