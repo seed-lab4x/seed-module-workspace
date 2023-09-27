@@ -1,0 +1,63 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/4docker/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: docker
+  tasks:
+
+    - name: playbook var|all host|add secret
+      include_tasks: docker-secret.test.yml
+      vars:
+        secret:
+          name: "test-add-{{ inventory_hostname }}-playbook_0"
+          data: |
+            test-from-playbook_0: 'true'
+            test-is-manager: '{{ 'yes' if(inventory_hostname in groups['docker-manager']) else 'no' }}'
+
+    - name: playbook var|all host|info secret
+      when: inventory_hostname in groups['docker-manager']
+      ansible.builtin.shell: "docker secret inspect test-add-{{ inventory_hostname }}-playbook_0"
+      register: secret_info
+
+    - name: playbook var|all host|assert secret
+      when: inventory_hostname in groups['docker-manager']
+      vars:
+        json: "{{ secret_info.stdout | from_json | first }}"
+      ansible.builtin.assert:
+        that:
+          - json.Spec.Name is contains('playbook_0')
+
+    - name: playbook var|all host|remove secret
+      community.docker.docker_secret:
+        state: absent
+        name: "test-add-{{ inventory_hostname }}-playbook_0"
+
+
+    - name: playbook var|any|add secret
+      include_tasks: docker-secret.test.yml
+      vars:
+        secret_share:
+          any: true
+          group: docker-manager
+        secret:
+          name: "test-add-any-playbook_1"
+          data_src: "{{ playbook_dir }}/ansible-playbook.test.yml"
+
+    - name: playbook var|any|info secret
+      when: inventory_hostname in groups['docker-manager']
+      ansible.builtin.shell: "docker secret inspect test-add-any-playbook_1"
+      register: secret_info
+
+    - name: playbook var|any|assert secret
+      when: inventory_hostname in groups['docker-manager']
+      vars:
+        json: "{{ secret_info.stdout | from_json | first }}"
+      ansible.builtin.assert:
+        that:
+          - json.Spec.Name is contains('playbook_1')
+
+    - name: playbook var|all host|remove secret
+      community.docker.docker_secret:
+        state: absent
+        name: "test-add-any-playbook_1"
