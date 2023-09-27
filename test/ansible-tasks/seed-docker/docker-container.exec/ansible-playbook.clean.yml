@@ -1,0 +1,13 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/3nfs/ansible-inventories
+# code: language=ansible
+---
+
+- name: clean|local
+  hosts: localhost
+  connection: local
+  tasks:
+
+    - name: clean|remove container
+      community.docker.docker_container:
+        state: absent
+        name: "test-container-exec"
