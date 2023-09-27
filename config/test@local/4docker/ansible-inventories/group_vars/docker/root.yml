@@ -1,0 +1,10 @@
+# code: language=ansible
+
+root:
+  local: inventory_linux_root
+
+  sub1:
+    local: inventory_linux_root.sub1
+
+  sub2:
+    local: inventory_linux_root.sub1

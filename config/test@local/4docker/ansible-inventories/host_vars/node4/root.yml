@@ -1,0 +1,11 @@
+# code: language=ansible
+
+# rewrite group_vars
+root:
+  local: inventory_node4_root
+
+  sub1:
+    local: inventory_node4_root.sub1
+
+  sub2:
+    local: inventory_node4_root.sub2
