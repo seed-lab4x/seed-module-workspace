@@ -1,0 +1,52 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -K -i ${PWD}/../../test@local/3nfs/ansible-inventories
+# code: language=ansible
+---
+
+- name: init|local
+  hosts: localhost
+  connection: local
+  tasks:
+
+    - name: init|mkdir build path
+      ansible.builtin.file:
+        state: directory
+        path: "{{ playbook_dir }}/build"
+
+    - name: init|create exports file
+      ansible.builtin.copy:
+        dest: "{{ playbook_dir }}/build/exports"
+        content: |
+          /data        *(fsid=0,rw,no_root_squash,no_subtree_check,insecure)
+
+    - name: init|add nfs-volume
+      community.docker.docker_volume:
+        name: "test-mount-wait"
+
+    - name: init|add nfs-server
+      community.docker.docker_container:
+        detach: true
+        name: "test-mount-wait"
+        image: erichough/nfs-server:2.2.1
+        env:
+          TZ: Asia/Hong_Kong
+          NFS_LOG_LEVEL: DEBUG
+          NFS_DISABLE_VERSION_3: 'true'
+        volumes:
+          - "{{ playbook_dir }}/build/exports:/etc/exports"
+          - "test-mount-wait:/data"
+          - /lib/modules:/lib/modules:ro
+        capabilities:
+          - SYS_ADMIN
+          - SYS_MODULE
+          - CAP_SYS_ADMIN
+        ports:
+          - "2049:2049"
+          - "2049:2049/udp"
+        user: root
+        privileged: true
+
+    - name: init|backup fstab
+      become: true
+      ansible.builtin.copy:
+        src: "/etc/fstab"
+        dest: "{{ playbook_dir }}/build/fstab.bak"

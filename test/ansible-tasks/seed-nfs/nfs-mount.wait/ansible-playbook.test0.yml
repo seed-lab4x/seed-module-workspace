@@ -1,0 +1,120 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -K -i ${PWD}/../../test@local/3nfs/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: nfs-client
+  tasks:
+
+    - name: playbook var|all host|wait nfs temp mount
+      include_tasks: nfs-mount.test.yml
+      vars:
+        mount:
+          nfs:
+            src: "localhost:/"
+            opts: "vers=4,loud,rw,sync"
+          until:
+            - mount_nfs is succeeded
+
+    - name: playbook var|all host|assert nfs temp mount
+      ansible.builtin.assert:
+        that:
+          - mount_temp.path is defined
+
+    - name: playbook var|all host|clean nfs temp mount
+      ansible.builtin.set_fact:
+        mount_temp: !!null
+        mount_nfs: !!null
+
+
+    - name: playbook var|all host|wait nfs path mount
+      include_tasks: nfs-mount.test.yml
+      vars:
+        mount:
+          nfs:
+            src: "localhost:/"
+            path: "{{ playbook_dir }}/build/{{ inventory_hostname }}/playbook_1"
+            opts: "vers=4,loud,rw,sync"
+          until:
+            - mount_nfs is succeeded
+
+    - name: playbook var|all host|stat path mount
+      ansible.builtin.stat:
+        path: "{{ playbook_dir }}/build/{{ inventory_hostname }}/playbook_1"
+      register: path_stat
+
+    - name: playbook var|all host|assert nfs path mount
+      ansible.builtin.assert:
+        that:
+          - mount_temp is skipped
+          - path_stat.stat.exists
+
+    - name: playbook var|all host|clean nfs path mount
+      ansible.builtin.set_fact:
+        mount_temp: !!null
+        mount_nfs: !!null
+
+
+    - block:
+      - name: playbook var|all host|wait nfs failed
+        include_tasks: nfs-mount.test.yml
+        vars:
+          mount:
+            nfs:
+              src: "localhost:/none"
+              path: "{{ playbook_dir }}/build/{{ inventory_hostname }}/playbook_2"
+              opts: "vers=4,loud,rw,sync"
+            until:
+              - mount_nfs is succeeded
+            delay_start: 1
+            retries: 1
+            delay: 1
+
+      rescue:
+      - name: playbook var|all host|assert nfs failed
+        ansible.builtin.assert:
+          that:
+            - mount_nfs is failed
+
+      always:
+      - name: playbook var|all host|clean nfs failed
+        ansible.builtin.set_fact:
+          mount_temp: !!null
+          mount_nfs: !!null
+          # failed will keep this
+          _mount: !!null
+
+
+    - name: playbook var|any|wait nfs
+      include_tasks: nfs-mount.test.yml
+      vars:
+        mount_share:
+          any: true
+          group: nfs-23
+        mount:
+          nfs:
+            src: "localhost:/{{ '' if(inventory_hostname == 'node3') else 'none' }}"
+            path: "{{ playbook_dir }}/build/{{ inventory_hostname }}/playbook_3"
+            opts: "vers=4,loud,rw,sync"
+          until:
+            - mount_nfs is succeeded
+          delay_start: 1
+          retries: 1
+          delay: 1
+
+    - name: playbook var|any|assert nfs host node2
+      when: inventory_hostname == 'node2'
+      ansible.builtin.assert:
+        that:
+          - mount_nfs is failed
+
+    - name: playbook var|any|assert nfs host node3
+      when: inventory_hostname == 'node3'
+      ansible.builtin.assert:
+        that:
+          - mount_nfs is succeeded
+
+    - name: playbook var|any|clean nfs
+      ansible.builtin.set_fact:
+        mount_temp: !!null
+        mount_nfs: !!null
