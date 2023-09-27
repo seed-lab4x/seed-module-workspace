@@ -1,0 +1,47 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/4linux/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: all
+  tasks:
+
+    - name: playbook var|not once|include task
+      include_tasks: seed-task.test.yml
+      vars:
+        task_share:
+          run_once: false
+          task: ansible-tasks.test.yml
+
+    - name: playbook var|not once|assert fact
+      ansible.builtin.assert:
+        that:
+          - test_result is contains(inventory_hostname)
+
+    - name: playbook var|not once|clean fact
+      ansible.builtin.set_fact:
+        test_result: !!null
+
+
+    - name: playbook var|once|include task
+      include_tasks: seed-task.test.yml
+      vars:
+        task_share:
+          run_once: true
+          task: ansible-tasks.test.yml
+
+    - name: playbook var|once|assert fact host node1
+      when: inventory_hostname == 'node1'
+      ansible.builtin.assert:
+        that:
+          - test_result is contains(inventory_hostname)
+
+    - name: playbook var|once|assert fact host other
+      when: inventory_hostname != 'node1'
+      ansible.builtin.assert:
+        that:
+          - test_result | default(None) == None
+
+    - name: playbook var|once|clean fact
+      ansible.builtin.set_fact:
+        test_result: !!null
