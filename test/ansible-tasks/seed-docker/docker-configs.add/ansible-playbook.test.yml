@@ -1,0 +1,86 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/4docker/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: docker
+  tasks:
+
+    - name: playbook var|index loop|add configs
+      include_tasks: docker-configs.test.yml
+      vars:
+        configs:
+          - name: "test-add-{{ inventory_hostname }}-playbook_0"
+            data: |
+              test-from-playbook_0: 'true'
+              test-is-manager: '{{ 'yes' if(inventory_hostname in groups['docker-manager']) else 'no' }}'
+          - name: "test-add-{{ inventory_hostname }}-playbook_1"
+            data_src: "{{ playbook_dir }}/ansible-playbook.test.yml"
+
+    - name: playbook var|index loop|assert configs
+      ansible.builtin.assert:
+        that:
+          - test_include_count | int == 2
+          - test_append_result | length == 2
+          - test_append_result[0].index == '0'
+          - test_append_result[1].index == '1'
+
+    - name: playbook var|index loop|clean test
+      ansible.builtin.set_fact:
+        test_include_count: 0
+        test_append_result: []
+
+
+    - name: playbook var|value loop|add configs
+      include_tasks: docker-configs.test.yml
+      vars:
+        configs_share:
+          mode: value
+          group: docker-manager
+        configs:
+          - once: false
+            any: false
+            name: "test-add-{{ inventory_hostname }}-playbook_2"
+            data: |
+              test-from-playbook_0: 'true'
+              test-is-manager: '{{ 'yes' if(inventory_hostname in groups['docker-manager']) else 'no' }}'
+          - once: false
+            any: true
+            name: "test-add-any-playbook_3"
+            data_src: "{{ playbook_dir }}/ansible-playbook.test.yml"
+          - once: true
+            any: true
+            name: "test-add-any-playbook_4"
+            data_src: "{{ playbook_dir }}/ansible-playbook.test.yml"
+
+    - name: playbook var|value loop|assert configs
+      ansible.builtin.assert:
+        that:
+          - test_include_count | int == (2 + 1 + 1)
+
+    - name: playbook var|value loop|assert configs host node1
+      when: inventory_hostname == 'node1'
+      ansible.builtin.assert:
+        that:
+          - test_append_result | length == 3
+          - test_append_result[0].share.any == false
+          - test_append_result[0].param.name is contains('playbook_2')
+          - test_append_result[1].share.any == true
+          - test_append_result[1].param.name is contains('playbook_3')
+          - test_append_result[2].share.any == true
+          - test_append_result[2].param.name is contains('playbook_4')
+
+    - name: playbook var|value loop|assert configs host node3
+      when: inventory_hostname == 'node3'
+      ansible.builtin.assert:
+        that:
+          - test_append_result | length == 2
+          - test_append_result[0].share.any == true
+          - test_append_result[0].param.name is contains('playbook_3')
+          - test_append_result[1].share.any == false
+          - test_append_result[1].param.name is contains('playbook_2')
+
+    - name: playbook var|value loop|clean test
+      ansible.builtin.set_fact:
+        test_include_count: 0
+        test_append_result: []
