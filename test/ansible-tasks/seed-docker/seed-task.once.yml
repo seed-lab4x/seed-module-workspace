@@ -8,6 +8,8 @@
         replace: ../seed-docker/docker-volumes.add/docker-volume.add.yml
       - search: seed-docker/docker-volume.push.yml
         replace: ../seed-docker/docker-volumes.push/docker-volume.push.yml
+      - search: seed-docker/docker-network.add.yml
+        replace: ../seed-docker/docker-networks.add/docker-network.add.yml
   ansible.builtin.set_fact:
     _task_share:
       run_once: "{{ task_share.run_once }}"
