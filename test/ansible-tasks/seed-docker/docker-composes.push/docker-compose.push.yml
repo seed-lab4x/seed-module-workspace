@@ -1,0 +1,25 @@
+# code: language=ansible
+---
+
+- name: docker-compose.push|debug share
+  run_once: true
+  ansible.builtin.debug:
+    var: compose_share
+
+- name: docker-compose.push|debug param
+  ansible.builtin.debug:
+    var: compose
+
+- name: docker-compose.push|fact append result
+  vars:
+    item:
+      share: "{{ compose_share }}"
+      param: "{{ compose }}"
+      index: "{{ compose_index | default('') }}"
+  ansible.builtin.set_fact:
+    test_append_result: "{{ test_append_result | default([]) + [item] }}"
+
+- name: docker-compose.push|fact include count
+  run_once: true
+  ansible.builtin.set_fact:
+    test_include_count: "{{ test_include_count | default(0) | int + 1 }}"
