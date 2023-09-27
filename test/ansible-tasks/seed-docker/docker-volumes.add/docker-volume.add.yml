@@ -1,0 +1,25 @@
+# code: language=ansible
+---
+
+- name: docker-volume.add|debug share
+  run_once: true
+  ansible.builtin.debug:
+    var: volume_share
+
+- name: docker-volume.add|debug param
+  ansible.builtin.debug:
+    var: volume
+
+- name: docker-volume.add|fact append result
+  vars:
+    item:
+      share: "{{ volume_share }}"
+      param: "{{ volume }}"
+      index: "{{ volume_index | default('') }}"
+  ansible.builtin.set_fact:
+    test_append_result: "{{ test_append_result | default([]) + [item] }}"
+
+- name: docker-volume.add|fact include count
+  run_once: true
+  ansible.builtin.set_fact:
+    test_include_count: "{{ test_include_count | default(0) | int + 1 }}"
