@@ -5,6 +5,7 @@
   run_once: true
   loop:
     - 'test/ansible-tasks/seed-docker/docker-compose.deploy'
+    - 'test/ansible-tasks/seed-docker/docker-stack.deploy'
   when: playbook_dir is contains(item)
   ansible.builtin.set_fact:
     test_redirect: false
@@ -35,6 +36,7 @@
           replace: ../seed-docker/docker-envs.push/docker-env.push.yml
         - search: seed-docker/docker-compose.push.yml
           replace: ../seed-docker/docker-composes.push/docker-compose.push.yml
+    run_once: true
     ansible.builtin.set_fact:
       _task_share:
         run_once: "{{ task_share.run_once }}"
