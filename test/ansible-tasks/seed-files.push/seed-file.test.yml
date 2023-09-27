@@ -1,0 +1,25 @@
+# code: language=ansible
+---
+
+- name: seed-file.test|debug share
+  run_once: true
+  ansible.builtin.debug:
+    var: file_share
+
+- name: seed-file.test|debug param
+  ansible.builtin.debug:
+    var: file
+
+- name: seed-file.test|fact append result
+  vars:
+    item:
+      share: "{{ file_share }}"
+      param: "{{ file }}"
+      index: "{{ file_index | default('') }}"
+  ansible.builtin.set_fact:
+    test_append_result: "{{ test_append_result | default([]) + [item] }}"
+
+- name: seed-file.test|fact include count
+  run_once: true
+  ansible.builtin.set_fact:
+    test_include_count: "{{ test_include_count | default(0) | int + 1 }}"
