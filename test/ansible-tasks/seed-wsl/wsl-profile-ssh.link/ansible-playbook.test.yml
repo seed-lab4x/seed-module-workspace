@@ -1,0 +1,19 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -K -i ${PWD}/../../test@local/1wsl/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: wsl
+  tasks:
+
+    - name: 0|link ssh
+      include_tasks: wsl-profile-ssh.test.yml
+
+    - name: 0|assert results
+      ansible.builtin.assert:
+        that:
+          - wslu_command_check is succeeded or get_wslu is succeeded
+          - win_userprofile_get is succeeded
+          - win_username_get is succeeded
+          - win_profile_moute is succeeded
+          - usr_ssh_stat is succeeded
