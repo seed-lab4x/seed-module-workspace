@@ -1,0 +1,101 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/4docker/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: docker
+  tasks:
+
+    - name: playbook var|all host|push file docker type
+      include_tasks: docker-volume.test.yml
+      vars:
+        volume:
+          name: "test-push-{{ inventory_hostname }}-normal"
+          src: "{{ playbook_dir }}/file/file"
+          dest: "test-from-playbook_0/file.copy"
+
+    - name: playbook var|all host|stat file docker type
+      ansible.builtin.stat:
+        path: "{{ workspace.remote }}/normal/test-from-playbook_0/file.copy"
+      register: file_stat
+
+    - name: playbook var|all host|assert file docker type
+      ansible.builtin.assert:
+        that:
+          - file_stat.stat.exists
+          - file_stat.stat.path | basename == 'file.copy'
+          - not file_stat.stat.isdir
+          - file_stat.stat.size == 9
+
+
+    - name: playbook var|all host|push dir docker type
+      include_tasks: docker-volume.test.yml
+      vars:
+        volume:
+          name: "test-push-{{ inventory_hostname }}-normal"
+          src: "{{ playbook_dir }}/file/dir/"
+          dest: "test-from-playbook_1/dir.copy"
+
+    - name: playbook var|all host|stat dir docker type
+      ansible.builtin.stat:
+        path: "{{ workspace.remote }}/normal/test-from-playbook_1/dir.copy"
+      register: dir_stat
+
+    - name: playbook var|all host|assert dir docker type
+      ansible.builtin.assert:
+        that:
+          - dir_stat.stat.exists
+          - dir_stat.stat.path | basename == 'dir.copy'
+          - dir_stat.stat.isdir
+
+
+    - name: playbook var|all host|push mkdir docker type
+      include_tasks: docker-volume.test.yml
+      vars:
+        volume:
+          name: "test-push-{{ inventory_hostname }}-normal"
+          dest: "test-from-playbook_2/dir.mkdir"
+
+    - name: playbook var|all host|stat mkdir docker type
+      ansible.builtin.stat:
+        path: "{{ workspace.remote }}/normal/test-from-playbook_2/dir.mkdir"
+      register: dir_stat
+
+    - name: playbook var|all host|assert mkdir docker type
+      ansible.builtin.assert:
+        that:
+          - dir_stat.stat.exists
+          - dir_stat.stat.path | basename == 'dir.mkdir'
+          - dir_stat.stat.isdir
+
+
+    - name: playbook var|any|push file docker type
+      include_tasks: docker-volume.test.yml
+      vars:
+        volume_share:
+          any: true
+          group: docker-34
+        volume:
+          name: "test-push-{{ inventory_hostname }}-normal"
+          src: "{{ playbook_dir }}/file/{{ 'file' if(inventory_hostname == 'node3') else 'none' }}"
+          dest: "test-from-playbook_3/file.copy"
+
+    - name: playbook var|any|stat file docker type
+      ansible.builtin.stat:
+        path: "{{ workspace.remote }}/normal/test-from-playbook_3/file.copy"
+      register: file_stat
+
+    - name: playbook var|any|assert file docker type host node3
+      when: inventory_hostname == 'node3'
+      ansible.builtin.assert:
+        that:
+          - file_stat.stat.exists
+          - file_stat.stat.path | basename == 'file.copy'
+          - not file_stat.stat.isdir
+          - file_stat.stat.size == 9
+
+    - name: playbook var|any|assert file docker type host node4
+      when: inventory_hostname == 'node4'
+      ansible.builtin.assert:
+        that:
+          - not file_stat.stat.exists
