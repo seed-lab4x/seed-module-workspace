@@ -18,6 +18,8 @@
         replace: ../seed-docker/docker-configs.add/docker-config.add.yml
       - search: seed-docker/docker-secret.add.yml
         replace: ../seed-docker/docker-secrets.add/docker-secret.add.yml
+      - search: seed-docker/docker-env.push.yml
+        replace: ../seed-docker/docker-envs.push/docker-env.push.yml
   ansible.builtin.set_fact:
     _task_share:
       run_once: "{{ task_share.run_once }}"

@@ -1,0 +1,98 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/4docker/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: docker
+  tasks:
+
+    - name: playbook var|index loop|push envs
+      include_tasks: docker-envs.test.yml
+      vars:
+        envs:
+          - dest: "{{ workspace.remote }}/test-from-playbook_0.env"
+            content: |
+              FROM=playbook_0
+              UNSAFE=/conf/{{ '{{.Node.Hostname}}' }}
+              IS_MANAGER={{ 'yes' if(inventory_hostname in groups['docker-manager']) else 'no' }}
+          - file: "test-from-playbook_1.env"
+            content:
+              - FROM=playbook_1
+              - !unsafe 'UNSAFE=/conf/{{.Node.Hostname}}'
+              - IS_MANAGER={{ 'yes' if(inventory_hostname in groups['docker-manager']) else 'no' }}
+          - file: "test-from-playbook_2.env"
+            content:
+              FROM: playbook_2
+              UNSAFE: !unsafe '/conf/{{.Node.Hostname}}'
+              IS_MANAGER: "{{ 'yes' if(inventory_hostname in groups['docker-manager']) else 'no' }}"
+
+    - name: playbook var|index loop|assert envs
+      ansible.builtin.assert:
+        that:
+          - test_include_count | int == 3
+          - test_append_result | length == 3
+          - test_append_result[0].index == '0'
+          - test_append_result[1].index == '1'
+          - test_append_result[2].index == '2'
+
+    - name: playbook var|index loop|clean test
+      ansible.builtin.set_fact:
+        test_include_count: 0
+        test_append_result: []
+
+
+    - name: playbook var|value loop|push envs
+      include_tasks: docker-envs.test.yml
+      vars:
+        envs_share:
+          mode: value
+          group: docker-34
+        envs:
+          - once: false
+            any: false
+            dest: "{{ workspace.remote }}/test-from-playbook_3.env"
+            template: "{{ playbook_dir }}/template/playbook_3.env"
+          - once: false
+            any: true
+            file: "test-from-playbook_4.env"
+            template: "{{ playbook_dir }}/template/playbook_4.env.j2"
+            vars:
+              IS_MANAGER: 'no'
+          - once: true
+            any: true
+            file: "test-from-playbook_5.env"
+            template: "{{ playbook_dir }}/template/playbook_5.env.j2"
+            vars:
+              IS_MANAGER: 'no'
+
+    - name: playbook var|value loop|assert envs
+      ansible.builtin.assert:
+        that:
+          - test_include_count | int == (2 + 1 + 1)
+
+    - name: playbook var|value loop|assert envs host node3
+      when: inventory_hostname == 'node3'
+      ansible.builtin.assert:
+        that:
+          - test_append_result | length == 3
+          - test_append_result[0].share.any == false
+          - test_append_result[0].param.template is contains('playbook_3')
+          - test_append_result[1].share.any == true
+          - test_append_result[1].param.template is contains('playbook_4')
+          - test_append_result[2].share.any == true
+          - test_append_result[2].param.template is contains('playbook_5')
+
+    - name: playbook var|value loop|assert envs host node4
+      when: inventory_hostname == 'node4'
+      ansible.builtin.assert:
+        that:
+          - test_append_result | length == 2
+          - test_append_result[0].share.any == true
+          - test_append_result[0].param.template is contains('playbook_4')
+          - test_append_result[1].share.any == false
+          - test_append_result[1].param.template is contains('playbook_3')
+
+    - name: playbook var|value loop|clean test
+      ansible.builtin.set_fact:
+        test_include_count: 0
+        test_append_result: []
