@@ -1,0 +1,6 @@
+# code: language=ansible
+
+# for seed-ssh.approve
+alpine_command: sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/repositories
+
+ssh_dir: "{{ ansible_env.HOME ~ '/seed-test-ssh-dir' if(ansible_env.WSL_DISTRO_NAME is defined) else (playbook_dir ~ '/build/.ssh') }}"
