@@ -14,6 +14,12 @@ workspace:
     # bug for https://github.com/docker/docker-py/issues/3113
     - requests==2.28.1
 
+  local: "{{ host_path }}/../../../"
+  # Simulate multiple host paths on localhost
+  remote: "{{ playbook_dir }}/build/{{ inventory_hostname }}"
+  unknow: "no change fact attribute defined by inventory {{ inventory_hostname }}"
+
+
 ssh:
   name: none
   group: none

@@ -1,0 +1,47 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/4linux/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: all
+  tasks:
+
+    - name: inventory var|fact workspace
+      include_tasks: seed-workspace.test.yml
+
+    - name: inventory var|assert results
+      ansible.builtin.assert:
+        that:
+          - workspace.local is not search('\.\./')
+          - (workspace.local | split('/'))[-1] == 'seed-module-workspace'
+          - (workspace.remote | split('/'))[-1] == inventory_hostname
+          - workspace.unknow is defined
+
+
+    - name: playbook var|fact workspace
+      include_tasks: seed-workspace.test.yml
+      vars:
+        workspace:
+          local: "{{ inventory_dir }}/../"
+
+    - name: playbook var|assert results
+      ansible.builtin.assert:
+        that:
+          - workspace.local is not search('\.\./')
+          - (workspace.local | split('/'))[-1] == 'seed-module-workspace'
+          - (workspace.remote | split('/'))[-1] == (workspace.local | basename)
+          - workspace.unknow is undefined
+
+
+    - name: null var|fact workspace
+      include_tasks: seed-workspace.test.yml
+      vars:
+        workspace: !!null
+
+    - name: playbook var|assert results
+      ansible.builtin.assert:
+        that:
+          - workspace.local is not search('\.\./')
+          - (workspace.local | split('/'))[-1] == 'seed-module-workspace'
+          - (workspace.remote | split('/'))[-1] == (workspace.local | basename)
+          - workspace.unknow is undefined
