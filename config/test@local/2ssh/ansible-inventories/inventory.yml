@@ -13,9 +13,20 @@ all:
     # fix inventory_dir is undefined https://github.com/ansible/ansible/issues/31087
     localhost:
       ansible_connection: local
+    sys_init1:
+      ansible_host: localhost
+      ansible_connection: local
+    sys_init2:
+      ansible_host: localhost
+      ansible_connection: local
 
   children:
     ssh:
       hosts:
         node1:
         node2:
+
+    docker:
+      hosts:
+        sys_init1:
+        sys_init2:
