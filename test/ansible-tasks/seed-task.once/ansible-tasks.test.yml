@@ -1,0 +1,6 @@
+# code: language=ansible
+---
+
+- name: ansible-tasks.test|fact result
+  ansible.builtin.set_fact:
+    test_result: "{{ inventory_hostname }} run"
