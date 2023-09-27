@@ -1,0 +1,6 @@
+# ansible-galaxy install -r requirements.yml
+
+# roles:
+
+collections:
+  - name: community.general
