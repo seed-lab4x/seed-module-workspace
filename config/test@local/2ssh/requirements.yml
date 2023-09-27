@@ -1,0 +1,8 @@
+#!/usr/bin/env -S ansible-galaxy install -r
+
+roles:
+
+collections:
+  - name: community.general
+
+  - name: community.docker
