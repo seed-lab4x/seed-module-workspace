@@ -1,0 +1,63 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/4docker/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: docker
+  tasks:
+
+    - name: playbook var|all host|add config
+      include_tasks: docker-config.test.yml
+      vars:
+        config:
+          name: "test-add-{{ inventory_hostname }}-playbook_0"
+          data: |
+            test-from-playbook_0: 'true'
+            test-is-manager: '{{ 'yes' if(inventory_hostname in groups['docker-manager']) else 'no' }}'
+
+    - name: playbook var|all host|info config
+      when: inventory_hostname in groups['docker-manager']
+      ansible.builtin.shell: "docker config inspect test-add-{{ inventory_hostname }}-playbook_0"
+      register: config_info
+
+    - name: playbook var|all host|assert config
+      when: inventory_hostname in groups['docker-manager']
+      vars:
+        json: "{{ config_info.stdout | from_json | first }}"
+      ansible.builtin.assert:
+        that:
+          - json.Spec.Name is contains('playbook_0')
+
+    - name: playbook var|all host|remove config
+      community.docker.docker_config:
+        state: absent
+        name: "test-add-{{ inventory_hostname }}-playbook_0"
+
+
+    - name: playbook var|any|add config
+      include_tasks: docker-config.test.yml
+      vars:
+        config_share:
+          any: true
+          group: docker-manager
+        config:
+          name: "test-add-any-playbook_1"
+          data_src: "{{ playbook_dir }}/ansible-playbook.test.yml"
+
+    - name: playbook var|any|info config
+      when: inventory_hostname in groups['docker-manager']
+      ansible.builtin.shell: "docker config inspect test-add-any-playbook_1"
+      register: config_info
+
+    - name: playbook var|any|assert config
+      when: inventory_hostname in groups['docker-manager']
+      vars:
+        json: "{{ config_info.stdout | from_json | first }}"
+      ansible.builtin.assert:
+        that:
+          - json.Spec.Name is contains('playbook_1')
+
+    - name: playbook var|all host|remove config
+      community.docker.docker_config:
+        state: absent
+        name: "test-add-any-playbook_1"
