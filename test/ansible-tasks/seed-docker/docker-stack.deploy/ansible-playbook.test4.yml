@@ -1,0 +1,131 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -K -i ${PWD}/../../test@local/4docker/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: docker
+  tasks:
+
+    - name: playbook var|fact workspace
+      include_tasks: "{{ workspace.local }}/seed/ansible-tasks/seed-workspace.fact.yml"
+
+    - name: playbook var|fact workpath
+      include_tasks: "{{ workspace.local }}/{{ workspace.seedpath }}/ansible-tasks/seed-workpath.fact.yml"
+      vars:
+        workpath:
+          path: "{{ workspace.local }}/playbook_4"
+
+
+    - name: playbook var|all host|init var|deploy stack
+      include_tasks: docker-stack.test.yml
+      vars:
+        stack:
+          name: "test-deploy-{{ inventory_hostname }}-playbook_4"
+          path: "{{ workpath.remote.full }}"
+          share:
+            mounts:
+              group: docker
+              mode: value
+            files:
+              mode: value
+            volumes:
+              mode: value
+            networks:
+              mode: value
+            envs:
+              mode: value
+            composes:
+              mode: value
+          vars:
+            mounts:
+              - nfs:
+                  src: "localhost:/"
+                  opts: "vers=4,loud,rw,sync"
+                until:
+                  - mount_nfs is succeeded
+                push:
+                  - any: true
+                    src: "{{ playbook_dir }}/file/file"
+                    dest: "file.push"
+            files:
+              - group: docker-manager
+                dest: "{{ workpath.remote.full }}/.env"
+            volumes:
+              - any: true
+                name: test-deploy-any-playbook_4
+                driver: local
+                driver_options:
+                  type: nfs
+                  device: device=:/
+                  o: addr=localhost,rw,nfsvers=4,async
+                push:
+                  - any: true
+                    src: "{{ playbook_dir }}/file/dir/"
+                    dest: "dir.push"
+            networks:
+              - group: docker-manager
+                once: true
+                # any: true
+                name: test-deploy-any-playbook_4
+                recreate: never
+                attachable: true
+                driver: overlay
+                wait:
+                  hosts:
+                    - host: test-deploy-network-init
+                      port: 9000
+                  retries: 10
+                  delay: 10
+            envs:
+              - group: docker-manager
+                file: .env/all.env
+                template: "{{ playbook_dir }}/template/playbook_4.compose.swarm.env"
+            composes:
+              - group: docker-manager
+                file: "test-deploy-playbook_4.compose.swarm.yml"
+                template: "{{ playbook_dir }}/template/playbook_4.compose.swarm.yml.j2"
+          default:
+            files:
+              - dest: "{{ workpath.remote.full }}"
+            envs:
+              - group: docker-manager
+                file: test-deploy-playbook_4.compose.swarm.env
+                content: |
+                  TZ=Asia/Hong_Kong
+            composes:
+              - group: docker-manager
+                file: test-deploy-playbook_4.compose.swarm.yml
+                content: |
+                  version: "3.8"
+                  services:
+                    playbook_4:
+                      image: alpine:3.18
+                      command: "tail -f /dev/null"
+
+    - name: playbook var|all host|init var|info service
+      when: inventory_hostname in groups['docker-manager']
+      community.docker.docker_swarm_service_info:
+        name: "test-deploy-{{ inventory_hostname }}-playbook_4_playbook_4"
+      register: service_info
+
+    - name: playbook var|all host|init var|assert stack
+      when: inventory_hostname in groups['docker-manager']
+      ansible.builtin.assert:
+        that:
+          - service_info.service.Spec.Name is contains(inventory_hostname)
+          - service_info.service.Spec.Name is contains('playbook_4')
+
+    - name: playbook var|all host|init var|remove stack
+      when: inventory_hostname in groups['docker-manager']
+      community.docker.docker_stack:
+        state: absent
+        name: "test-deploy-{{ inventory_hostname }}-playbook_4"
+
+    - name: playbook var|all host|init var|remove volume
+      when: inventory_hostname in groups['docker-manager']
+      community.docker.docker_volume:
+        state: absent
+        name: test-deploy-any-playbook_4
+      register: volume_remove
+      until: volume_remove is succeeded
+      delay: 10

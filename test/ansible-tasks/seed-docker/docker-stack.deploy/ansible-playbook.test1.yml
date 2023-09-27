@@ -1,0 +1,71 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/4docker/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: docker
+  tasks:
+
+    - name: playbook var|fact workspace
+      include_tasks: "{{ workspace.local }}/seed/ansible-tasks/seed-workspace.fact.yml"
+
+    - name: playbook var|fact workpath
+      include_tasks: "{{ workspace.local }}/{{ workspace.seedpath }}/ansible-tasks/seed-workpath.fact.yml"
+
+
+    - name: playbook var|all host|change name|deploy stack
+      include_tasks: docker-stack.test.yml
+      vars:
+        stack:
+          name: "test-deploy-{{ inventory_hostname }}-playbook_1"
+          vars: {}
+          default:
+            files:
+              - dest: "{{ workpath.remote.full }}/playbook_1"
+            envs:
+              - file: test-deploy-playbook_1.compose.swarm.env
+                content: |
+                  TZ=Asia/Hong_Kong
+            composes:
+              - file: test-deploy-playbook_1.compose.swarm.yml
+                content: |
+                  version: "3.8"
+                  services:
+                    playbook_1:
+                      image: alpine:3.18
+                      command: "tail -f /dev/null"
+
+    - name: playbook var|all host|change name|info service
+      when: inventory_hostname in groups['docker-manager']
+      community.docker.docker_swarm_service_info:
+        name: "test-deploy-{{ inventory_hostname }}-playbook_1_playbook_1"
+      register: service_info
+
+    - name: playbook var|all host|change name|stat stack
+      when: inventory_hostname in groups['docker-manager']
+      ansible.builtin.stat:
+        path: "{{ workpath.remote.full }}/test-deploy-playbook_1.compose.swarm.yml"
+      register: stack_stat
+
+    - name: playbook var|all host|change name|stat env
+      when: inventory_hostname in groups['docker-manager']
+      ansible.builtin.stat:
+        path: "{{ workpath.remote.full }}/test-deploy-playbook_1.compose.swarm.env"
+      register: env_stat
+
+    - name: playbook var|all host|change name|assert stack
+      when: inventory_hostname in groups['docker-manager']
+      ansible.builtin.assert:
+        that:
+          - service_info.service.Spec.Name is contains(inventory_hostname)
+          - service_info.service.Spec.Name is contains('playbook_1')
+          - stack_stat.stat.exists
+          - stack_stat.stat.path | basename == 'test-deploy-playbook_1.compose.swarm.yml'
+          - env_stat.stat.exists
+          - env_stat.stat.path | basename == 'test-deploy-playbook_1.compose.swarm.env'
+
+    - name: playbook var|all host|change name|remove stack
+      when: inventory_hostname in groups['docker-manager']
+      community.docker.docker_stack:
+        state: absent
+        name: "test-deploy-{{ inventory_hostname }}-playbook_1"

@@ -1,0 +1,50 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -K -i ${PWD}/../../test@local/4docker/ansible-inventories
+# code: language=ansible
+---
+
+- name: clean|local
+  hosts: localhost
+  connection: local
+  tasks:
+
+    - name: clean|remove network container
+      community.docker.docker_container:
+        state: absent
+        name: test-deploy-network-init
+
+    - name: clean|remove network
+      community.docker.docker_network:
+        state: absent
+        name: test-deploy-any-playbook_4
+      register: volume_remove
+      until: volume_remove is succeeded
+      delay: 10
+
+
+    - name: clean|unmount
+      become: true
+      ansible.posix.mount:
+        state: absent
+        path: "{{ playbook_dir }}/build/data"
+
+    - name: clean|clean nfs-server
+      community.docker.docker_container:
+        state: absent
+        name: test-deploy-mount-init
+
+    - name: clean|clean nfs-volume
+      community.docker.docker_volume:
+        state: absent
+        name: test-deploy-mount-init
+
+    - name: clean|restore fstab
+      become: true
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/build/fstab.bak"
+        dest: "/etc/fstab"
+
+    - name: clean|clean build path
+      become: true
+      ansible.builtin.file:
+        state: absent
+        path: "{{ playbook_dir }}/build"
