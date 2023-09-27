@@ -1,0 +1,86 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/4docker/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: docker
+  tasks:
+
+    - name: playbook var|all host|not exists|wait container
+      include_tasks: docker-container.test.yml
+      vars:
+        container:
+          name: "test-wait-not-exists-playbook_0"
+          until:
+            - not container_info.exists
+          retries: 1
+          delay: 1
+
+    - name: playbook var|all host|not exists|assert container
+      ansible.builtin.assert:
+        that:
+          - not container_info.exists
+
+    - name: playbook var|all host|not exists|clean container_info
+      ansible.builtin.set_fact:
+        container_info: !!null
+
+
+    - block:
+      - name: playbook var|all host|failed|wait container
+        include_tasks: docker-container.test.yml
+        vars:
+          container:
+            name: "test-wait-failed-playbook_1"
+            until:
+              - container_info.exists
+            delay_start: 1
+            retries: 1
+            delay: 1
+
+      rescue:
+      - name: playbook var|all host|failed|assert container
+        ansible.builtin.assert:
+          that:
+            - not container_info.exists
+
+      always:
+      - name: playbook var|all host|failed|clean container_info
+        ansible.builtin.set_fact:
+          container_info: !!null
+          # failed will keep this
+          _container: !!null
+
+
+    - name: playbook var|any|wait container
+      include_tasks: docker-container.test.yml
+      vars:
+        container_share:
+          any: true
+          group: docker-34
+        container:
+          name: "test-container-wait{{ '' if(inventory_hostname == 'node3') else 'none' }}"
+          until:
+            - container_info.exists
+          delay_start: 1
+          retries: 1
+          delay: 1
+          append: containers_info
+
+    - name: playbook var|any|assert container host node3
+      when: inventory_hostname == 'node3'
+      ansible.builtin.assert:
+        that:
+          - container_info.exists
+          - container_info.container.Name is contains('test-container-wait')
+          - containers_info | length == 1
+
+    - name: playbook var|any|assert container host node4
+      when: inventory_hostname == 'node4'
+      ansible.builtin.assert:
+        that:
+          - not container_info.exists
+
+    - name: playbook var|any|clean container_info
+      ansible.builtin.set_fact:
+        container_info: !!null
