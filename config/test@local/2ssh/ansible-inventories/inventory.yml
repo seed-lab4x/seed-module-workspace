@@ -1,0 +1,21 @@
+# code: language=ansible
+
+all:
+  hosts:
+    node1:
+      ansible_host: localhost
+      ansible_port: 22221
+      ansible_user: seed
+    node2:
+      ansible_host: localhost
+      ansible_port: 22222
+      ansible_user: seed
+    # fix inventory_dir is undefined https://github.com/ansible/ansible/issues/31087
+    localhost:
+      ansible_connection: local
+
+  children:
+    ssh:
+      hosts:
+        node1:
+        node2:
