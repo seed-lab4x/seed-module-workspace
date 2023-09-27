@@ -1,0 +1,6 @@
+# code: language=ansible
+
+all:
+  hosts:
+    localhost:
+      ansible_connection: local
