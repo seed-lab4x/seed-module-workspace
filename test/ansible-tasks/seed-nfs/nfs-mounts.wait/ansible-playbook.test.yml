@@ -1,0 +1,141 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/3nfs/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: nfs-client
+  tasks:
+
+    - name: playbook var|index loop|push mounts
+      include_tasks: nfs-mounts.test.yml
+      vars:
+        mounts:
+          - group: nfs-23
+            nfs:
+              src: "localhost:/"
+              opts: "vers=4,loud,rw,sync"
+            unknow: "{{ inventory_hostname }}/test-from-playbook_0"
+          - group: nfs-23
+            nfs:
+              src: "localhost:/"
+              opts: "vers=4,loud,rw,sync"
+            until:
+              - mount_nfs is succeeded
+            unknow: "{{ inventory_hostname }}/test-from-playbook_1"
+          - group: nfs-23
+            nfs:
+              src: "localhost:/"
+              path: "{{ playbook_dir }}/build/data"
+              opts: "vers=4,loud,rw,sync"
+            until:
+              - mount_nfs is succeeded
+            unknow: "{{ inventory_hostname }}/test-from-playbook_2"
+          - group: nfs-23
+            nfs:
+              src: "localhost:/none"
+              opts: "vers=4,loud,rw,sync"
+            until:
+              - mount_nfs is failed
+            delay_start: 5
+            retries: 1
+            delay: 5
+            unknow: "{{ inventory_hostname }}/test-from-playbook_3"
+
+    - name: playbook var|index loop|assert mounts
+      ansible.builtin.assert:
+        that:
+          - test_include_count | int == 4
+
+    - name: playbook var|index loop|assert mounts group 'nfs-23'
+      when: inventory_hostname in groups['nfs-23']
+      ansible.builtin.assert:
+        that:
+          - test_append_result | length == 4
+          - test_append_result[0].index == '0'
+          - test_append_result[1].index == '1'
+          - test_append_result[2].index == '2'
+          - test_append_result[3].index == '3'
+
+    - name: playbook var|index loop|assert mounts group other
+      when: inventory_hostname not in groups['nfs-23']
+      ansible.builtin.assert:
+        that:
+          - test_append_result is undefined
+
+    - name: playbook var|index loop|clean test
+      ansible.builtin.set_fact:
+        test_include_count: 0
+        test_append_result: []
+
+
+    - name: playbook var|value loop|push mounts
+      include_tasks: nfs-mounts.test.yml
+      vars:
+        mounts_share:
+          mode: value
+          group: nfs-23
+        mounts:
+          - once: false
+            any: false
+            nfs:
+              src: "localhost:/"
+              path: "{{ playbook_dir }}/build/data"
+              opts: "vers=4,loud,rw,sync"
+            until:
+              - mount_nfs is succeeded
+            unknow: "{{ inventory_hostname }}/test-from-playbook_4/"
+          - once: false
+            any: true
+            nfs:
+              src: "localhost:/"
+              path: "{{ playbook_dir }}/build/data"
+              opts: "vers=4,loud,rw,sync"
+            until:
+              - mount_nfs is succeeded
+            unknow: "any/test-from-playbook_5/"
+          - once: true
+            any: true
+            nfs:
+              src: "localhost:/"
+              path: "{{ playbook_dir }}/build/data"
+              opts: "vers=4,loud,rw,sync"
+            until:
+              - mount_nfs is succeeded
+            unknow: "any/test-from-playbook_6/"
+
+    - name: playbook var|value loop|assert mounts
+      ansible.builtin.assert:
+        that:
+          - test_include_count | int == (2 + 1 + 1)
+
+    - name: playbook var|value loop|assert mounts host node2
+      when: inventory_hostname == 'node2'
+      ansible.builtin.assert:
+        that:
+          - test_append_result | length == 3
+          - test_append_result[0].share.any == false
+          - test_append_result[0].param.unknow is contains('test-from-playbook_4')
+          - test_append_result[0].param.unknow is contains(inventory_hostname)
+          - test_append_result[1].share.any == true
+          - test_append_result[1].param.unknow is contains('test-from-playbook_5')
+          - test_append_result[1].param.unknow is contains('any')
+          - test_append_result[2].share.any == true
+          - test_append_result[2].param.unknow is contains('test-from-playbook_6')
+          - test_append_result[2].param.unknow is contains('any')
+
+    - name: playbook var|value loop|assert mounts host node3
+      when: inventory_hostname == 'node3'
+      ansible.builtin.assert:
+        that:
+          - test_append_result | length == 2
+          - test_append_result[0].share.any == true
+          - test_append_result[0].param.unknow is contains('test-from-playbook_5')
+          - test_append_result[0].param.unknow is contains('any')
+          - test_append_result[1].share.any == false
+          - test_append_result[1].param.unknow is contains('test-from-playbook_4')
+          - test_append_result[1].param.unknow is contains(inventory_hostname)
+
+    - name: playbook var|value loop|clean test
+      ansible.builtin.set_fact:
+        test_include_count: 0
+        test_append_result: []

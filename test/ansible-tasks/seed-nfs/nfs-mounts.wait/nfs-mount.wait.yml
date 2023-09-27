@@ -1,0 +1,25 @@
+# code: language=ansible
+---
+
+- name: nfs-mount.wait|debug share
+  run_once: true
+  ansible.builtin.debug:
+    var: mount_share
+
+- name: nfs-mount.wait|debug param
+  ansible.builtin.debug:
+    var: mount
+
+- name: nfs-mount.wait|fact append result
+  vars:
+    item:
+      share: "{{ mount_share }}"
+      param: "{{ mount }}"
+      index: "{{ mount_index | default('') }}"
+  ansible.builtin.set_fact:
+    test_append_result: "{{ test_append_result | default([]) + [item] }}"
+
+- name: nfs-mount.wait|fact include count
+  run_once: true
+  ansible.builtin.set_fact:
+    test_include_count: "{{ test_include_count | default(0) | int + 1 }}"
