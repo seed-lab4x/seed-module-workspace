@@ -1,0 +1,103 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/4docker/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: docker
+  tasks:
+
+    - name: playbook var|all host|wait network
+      include_tasks: docker-network.test.yml
+      vars:
+        network:
+          name: "test-network-wait-local"
+          id: "{{ inventory_hostname }}-playbook_0"
+          hosts:
+            - host: "test-network-wait-local"
+              port: 9000
+
+    - name: playbook var|all host|assert network
+      ansible.builtin.assert:
+        that:
+          - network_container_status.finished
+          - network_container_status.container.Name is contains(inventory_hostname)
+          - network_container_status.container.Name is contains('playbook_0')
+
+    - name: playbook var|all host|clean network_container_status
+      ansible.builtin.set_fact:
+        network_container_status: !!null
+
+
+    - block:
+      - name: playbook var|all host|wait network failed
+        include_tasks: docker-network.test.yml
+        vars:
+          workpath:
+            remote:
+              full: "{{ playbook_dir }}/build/{{ inventory_hostname }}"
+          network:
+            name: "test-network-wait-empty"
+            id: "{{ inventory_hostname }}-playbook_1"
+            hosts:
+              - host: "test-network-wait-local"
+                port: 9000
+              - host: "test-network-wait-local"
+                port: 9001
+            delay: 3
+            retries: 5
+
+      rescue:
+      - name: playbook var|all host|assert network failed
+        ansible.builtin.assert:
+          that:
+            - network_container_status is failed
+
+      always:
+      - name: playbook var|all host|remove wait container
+        community.docker.docker_container:
+          state: absent
+          name: "test-network-wait-empty.{{ inventory_hostname }}-playbook_1"
+          keep_volumes: false
+
+      - name: playbook var|all host|clean network_container_status
+        ansible.builtin.set_fact:
+          network_container_status: !!null
+
+
+    - name: playbook var|any|wait network
+      include_tasks: docker-network.test.yml
+      vars:
+        network_share:
+          any: true
+          group: docker-34
+        network:
+          name: "test-network-wait-local"
+          id: "{{ inventory_hostname }}-playbook_2"
+          hosts:
+            - host: "test-network-wait-local"
+              port: "{{ '9000' if(inventory_hostname == 'node3') else '9999' }}"
+
+    - name: playbook var|any|assert network host node3
+      when: inventory_hostname == 'node3'
+      ansible.builtin.assert:
+        that:
+          - network_container_status.finished
+          - network_container_status.container.Name is contains(inventory_hostname)
+          - network_container_status.container.Name is contains('playbook_2')
+
+    - name: playbook var|any|assert network host node4
+      when: inventory_hostname == 'node4'
+      ansible.builtin.assert:
+        that:
+          - network_container_status is failed
+
+    - name: playbook var|any|remove wait container
+      when: inventory_hostname == 'node4'
+      community.docker.docker_container:
+        state: absent
+        name: "test-network-wait-local.{{ inventory_hostname }}-playbook_2"
+        keep_volumes: false
+
+    - name: playbook var|any|clean network_container_status
+      ansible.builtin.set_fact:
+        network_container_status: !!null
