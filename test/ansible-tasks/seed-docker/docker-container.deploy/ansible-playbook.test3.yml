@@ -21,7 +21,6 @@
       vars:
         container:
           name: "test-deploy-{{ inventory_hostname }}-playbook_3"
-          path: "{{ workpath.remote.full }}"
           share:
             mounts:
               group: docker
