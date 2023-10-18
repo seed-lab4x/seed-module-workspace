@@ -6,7 +6,7 @@
 [subrepo]
 	remote = git@github.com:seed-lab4x/seed-module-subrepo.git
 	branch = main
-	commit = ba60b99909de3b5b521e31b89bcf4911f4238655
+	commit = ae3edd2cebcff7ae3a9d73597bbee9fb60d37f44
 	method = merge
 	cmdver = 0.4.6
-	parent = bf8e2a99af865d4a360927f2abef12de952a11da
+	parent = 3b28c1cf60f707b4393ea2b94d992b42a2e4eb74
