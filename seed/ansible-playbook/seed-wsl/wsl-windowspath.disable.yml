@@ -4,8 +4,8 @@
 
 - name: disable
   hosts: wsl
-  become: true
-  gather_facts: false
+  become: false
+  gather_facts: true
   tasks:
 
     - name: disable wsl conf
