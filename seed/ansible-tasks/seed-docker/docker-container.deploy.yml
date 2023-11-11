@@ -54,6 +54,14 @@
     when: networks | length > 0
     include_tasks: "{{ workspace.local }}/{{ workspace.seedpath }}/ansible-tasks/seed-docker/docker-networks.init.yml"
 
+  - name: docker-container.deploy|push envs
+    vars:
+      envs: "{{ _container_deploy.vars.envs | default(envs_default,true) }}"
+      envs_default: "{{ _container_deploy.default.envs | default({},true) }}"
+      envs_share: "{{ _container_deploy.share.envs | default({},true) }}"
+    when: envs | length > 0
+    include_tasks: "{{ workspace.local }}/{{ workspace.seedpath }}/ansible-tasks/seed-docker/docker-envs.push.yml"
+
   - vars:
       container_var: "{{ _container_deploy.vars.container | default(container_default,true) }}"
       container_default: "{{ _container_deploy.default.container | default({},true) }}"
