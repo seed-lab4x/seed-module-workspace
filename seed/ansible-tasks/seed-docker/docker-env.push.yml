@@ -107,6 +107,13 @@
           dest: "{{ dest }}"
           mode: "{{ _env.mode | default(omit,true) }}"
 
+      - name: docker-env.push|src|push env
+        when: _env.src is defined
+        ansible.builtin.copy:
+          src: "{{ _env.src }}"
+          dest: "{{ dest }}"
+          mode: "{{ _env.mode | default(omit,true) }}"
+
     - name: docker-env.push|unfact param
       run_once: "{{ env_share.any | default(false) }}"
       ansible.builtin.set_fact:
