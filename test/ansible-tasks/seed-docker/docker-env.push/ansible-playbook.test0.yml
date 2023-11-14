@@ -6,7 +6,7 @@
   hosts: docker
   tasks:
 
-    - name: playbook var|all host|push env string dest
+    - name: playbook var|all host|push env string content dest
       include_tasks: docker-env.test.yml
       vars:
         env:
@@ -16,12 +16,12 @@
             UNSAFE=/conf/{{ '{{.Node.Hostname}}' }}
             IS_MANAGER={{ 'yes' if(inventory_hostname in groups['docker-manager']) else 'no' }}
 
-    - name: playbook var|all host|info env string dest
+    - name: playbook var|all host|info env string content dest
       ansible.builtin.stat:
         path: "{{ workspace.remote }}/test-from-playbook_0.env"
       register: file_stat
 
-    - name: playbook var|all host|assert env string dest
+    - name: playbook var|all host|assert env string content dest
       vars:
         file_content: "{{ lookup('file',file_stat.stat.path) }}"
       ansible.builtin.assert:
@@ -32,7 +32,7 @@
           - file_content is contains('playbook_0')
 
 
-    - name: playbook var|all host|push env list file
+    - name: playbook var|all host|push env list content file
       include_tasks: docker-env.test.yml
       vars:
         workpath:
@@ -45,12 +45,12 @@
             - !unsafe 'UNSAFE=/conf/{{.Node.Hostname}}'
             - IS_MANAGER={{ 'yes' if(inventory_hostname in groups['docker-manager']) else 'no' }}
 
-    - name: playbook var|all host|info env list file
+    - name: playbook var|all host|info env list content file
       ansible.builtin.stat:
         path: "{{ workspace.remote }}/test-from-playbook_1.env"
       register: file_stat
 
-    - name: playbook var|all host|assert env list file
+    - name: playbook var|all host|assert env list content file
       vars:
         file_content: "{{ lookup('file',file_stat.stat.path) }}"
       ansible.builtin.assert:
@@ -61,7 +61,7 @@
           - file_content is contains('playbook_1')
 
 
-    - name: playbook var|all host|push env dict file
+    - name: playbook var|all host|push env dict content file
       include_tasks: docker-env.test.yml
       vars:
         workpath:
@@ -74,12 +74,12 @@
             UNSAFE: !unsafe '/conf/{{.Node.Hostname}}'
             IS_MANAGER: "{{ 'yes' if(inventory_hostname in groups['docker-manager']) else 'no' }}"
 
-    - name: playbook var|all host|info env dict file
+    - name: playbook var|all host|info env dict content file
       ansible.builtin.stat:
         path: "{{ workspace.remote }}/test-from-playbook_2.env"
       register: file_stat
 
-    - name: playbook var|all host|assert env dict file
+    - name: playbook var|all host|assert env dict content file
       vars:
         file_content: "{{ lookup('file',file_stat.stat.path) }}"
       ansible.builtin.assert:
@@ -90,7 +90,7 @@
           - file_content is contains('playbook_2')
 
 
-    - name: playbook var|all host|push env temp dest
+    - name: playbook var|all host|push env src dest
       include_tasks: docker-env.test.yml
       vars:
         workpath:
@@ -98,14 +98,14 @@
             full: "{{ playbook_dir }}/build/{{ inventory_hostname }}"
         env:
           dest: "{{ workspace.remote }}/test-from-playbook_3.env"
-          template: "{{ playbook_dir }}/template/playbook_3.env"
+          src: "{{ playbook_dir }}/template/playbook_3.env"
 
-    - name: playbook var|all host|info env temp dest
+    - name: playbook var|all host|info env src dest
       ansible.builtin.stat:
         path: "{{ workspace.remote }}/test-from-playbook_3.env"
       register: file_stat
 
-    - name: playbook var|all host|assert env temp dest
+    - name: playbook var|all host|assert env src dest
       vars:
         file_content: "{{ lookup('file',file_stat.stat.path) }}"
       ansible.builtin.assert:

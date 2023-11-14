@@ -100,10 +100,17 @@
           dest: "{{ dest }}"
           mode: "{{ _env.mode | default(omit,true) }}"
 
-      - name: docker-env.test|copy|push env
+      - name: docker-env.test|content|push env
         when: _env.content is defined
         ansible.builtin.copy:
           content: "{{ _env.content | b64decode }}"
+          dest: "{{ dest }}"
+          mode: "{{ _env.mode | default(omit,true) }}"
+
+      - name: docker-env.test|src|push env
+        when: _env.src is defined
+        ansible.builtin.copy:
+          src: "{{ _env.src }}"
           dest: "{{ dest }}"
           mode: "{{ _env.mode | default(omit,true) }}"
 
