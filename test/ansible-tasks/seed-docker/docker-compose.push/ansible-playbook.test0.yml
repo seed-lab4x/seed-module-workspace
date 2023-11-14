@@ -6,7 +6,7 @@
   hosts: docker
   tasks:
 
-    - name: playbook var|all host|push compose string dest
+    - name: playbook var|all host|push compose content dest
       include_tasks: docker-compose.test.yml
       vars:
         compose:
@@ -18,12 +18,12 @@
                 image: alpine:3.18
                 command: "tail -f /dev/null"
 
-    - name: playbook var|all host|info compose string dest
+    - name: playbook var|all host|info compose content dest
       ansible.builtin.stat:
         path: "{{ workspace.remote }}/test-from-playbook_0.compose.yml"
       register: file_stat
 
-    - name: playbook var|all host|assert compose string dest
+    - name: playbook var|all host|assert compose content dest
       vars:
         file_content: "{{ lookup('file',file_stat.stat.path) }}"
       ansible.builtin.assert:
@@ -34,22 +34,19 @@
           - file_content is contains('playbook_0')
 
 
-    - name: playbook var|all host|push compose temp dest
+    - name: playbook var|all host|push compose src dest
       include_tasks: docker-compose.test.yml
       vars:
-        workpath:
-          remote:
-            full: "{{ playbook_dir }}/build/{{ inventory_hostname }}"
         compose:
           dest: "{{ workspace.remote }}/test-from-playbook_1.compose.yml"
-          template: "{{ playbook_dir }}/template/playbook_1.compose.yml"
+          src: "{{ playbook_dir }}/template/playbook_1.compose.yml"
 
-    - name: playbook var|all host|info compose temp dest
+    - name: playbook var|all host|info compose src dest
       ansible.builtin.stat:
         path: "{{ workspace.remote }}/test-from-playbook_1.compose.yml"
       register: file_stat
 
-    - name: playbook var|all host|assert compose temp dest
+    - name: playbook var|all host|assert compose src dest
       vars:
         file_content: "{{ lookup('file',file_stat.stat.path) }}"
       ansible.builtin.assert:

@@ -24,13 +24,13 @@
       msg: "var eval fail {{ compose }}"
       quiet: true
 
-  - name: docker-compose.test|template|fact param
+  - name: docker-compose.test|no content|fact param
     when:
-      - compose.template is defined
+      - compose.content is undefined
     ansible.builtin.set_fact:
       _compose: "{{ compose }}"
 
-  - name: docker-compose.test|content|fact param
+  - name: docker-compose.test|string content|fact param
     vars:
       content_b64encode:
         content: "{{ compose.content | b64encode }}"
@@ -77,10 +77,17 @@
           dest: "{{ dest }}"
           mode: "{{ _compose.mode | default(omit,true) }}"
 
-      - name: docker-compose.test|copy|push compose
+      - name: docker-compose.test|content|push compose
         when: _compose.content is defined
         ansible.builtin.copy:
           content: "{{ _compose.content | b64decode }}"
+          dest: "{{ dest }}"
+          mode: "{{ _compose.mode | default(omit,true) }}"
+
+      - name: docker-compose.test|src|push compose
+        when: _compose.src is defined
+        ansible.builtin.copy:
+          src: "{{ _compose.src }}"
           dest: "{{ dest }}"
           mode: "{{ _compose.mode | default(omit,true) }}"
 
