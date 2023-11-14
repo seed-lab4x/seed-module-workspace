@@ -34,11 +34,18 @@
         name: "test-deploy-{{ inventory_hostname }}-playbook_1"
       register: container_info
 
+    - name: playbook var|all host|change name|stat env
+      ansible.builtin.stat:
+        path: "{{ workpath.remote.full }}/test-deploy-playbook_1.container.env"
+      register: env_stat
+
     - name: playbook var|all host|change name|assert container
       ansible.builtin.assert:
         that:
           - container_info.container.Name is contains(inventory_hostname)
           - container_info.container.Name is contains('playbook_1')
+          - env_stat.stat.exists
+          - env_stat.stat.path | basename == 'test-deploy-playbook_1.container.env'
 
     - name: playbook var|all host|change name|remove container
       community.docker.docker_container:
