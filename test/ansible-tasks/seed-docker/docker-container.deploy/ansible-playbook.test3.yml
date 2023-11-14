@@ -1,0 +1,102 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -K -i ${PWD}/../../test@local/4docker/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: docker
+  tasks:
+
+    - name: playbook var|fact workspace
+      include_tasks: "{{ workspace.local }}/seed/ansible-tasks/seed-workspace.fact.yml"
+
+    - name: playbook var|fact workpath
+      include_tasks: "{{ workspace.local }}/{{ workspace.seedpath }}/ansible-tasks/seed-workpath.fact.yml"
+      vars:
+        workpath:
+          path: "{{ workspace.local }}/playbook_3"
+
+
+    - name: playbook var|all host|init var|deploy container
+      include_tasks: docker-container.test.yml
+      vars:
+        container:
+          name: "test-deploy-{{ inventory_hostname }}-playbook_3"
+          share:
+            mounts:
+              group: docker
+              mode: value
+            volumes:
+              mode: value
+          vars:
+            mounts:
+              - nfs:
+                  src: "localhost:/"
+                  opts: "vers=4,loud,rw,sync"
+                until:
+                  mount_nfs is succeeded
+                push:
+                  - any: true
+                    src: "{{ playbook_dir }}/file/file"
+                    dest: "file.push"
+            files:
+              - dest: "{{ workpath.remote.full }}/.env"
+            volumes:
+              - name: test-deploy-any-playbook_3
+                driver: local
+                driver_options:
+                  type: nfs
+                  device: device=:/
+                  o: addr=localhost,rw,nfsvers=4,async
+                push:
+                  - any: true
+                    src: "{{ playbook_dir }}/file/dir"
+                    dest: "dir.push"
+            networks:
+              - name: test-deploy-{{ inventory_hostname }}-playbook_3
+                attachable: true
+                driver: bridge
+                wait:
+                  hosts:
+                    - host: test-deploy-network-init
+                      port: 9000
+                  retries: 10
+                  delay: 10
+            container:
+              image: alpine:3.18
+              command: "tail -f /dev/null"
+              env:
+                TZ: Asia/Hong_Kong
+              volumes:
+                - test-deploy-any-playbook_3:/vol
+              networks:
+                - name: test-deploy-{{ inventory_hostname }}-playbook_3
+          default:
+            files:
+              - dest: "{{ workpath.remote.full }}"
+            container:
+              image: alpine:3.18
+              command: "tail -f /dev/null"
+              env:
+                TZ: Asia/Hong_Kong
+
+    - name: playbook var|all host|init var|info container
+      community.docker.docker_container_info:
+        name: "test-deploy-{{ inventory_hostname }}-playbook_3"
+      register: container_info
+
+    - name: playbook var|all host|init var|assert container
+      ansible.builtin.assert:
+        that:
+          - container_info.container.Name is contains(inventory_hostname)
+          - container_info.container.Name is contains('playbook_3')
+
+    - name: playbook var|all host|init var|remove container
+      community.docker.docker_container:
+        state: absent
+        name: "test-deploy-{{ inventory_hostname }}-playbook_3"
+        keep_volumes: false
+
+    - name: playbook var|all host|init var|remove volume
+      community.docker.docker_volume:
+        state: absent
+        name: test-deploy-any-playbook_3

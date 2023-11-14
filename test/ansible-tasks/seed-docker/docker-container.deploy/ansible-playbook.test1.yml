@@ -1,0 +1,54 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/4docker/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: docker
+  tasks:
+
+    - name: playbook var|fact workspace
+      include_tasks: "{{ workspace.local }}/seed/ansible-tasks/seed-workspace.fact.yml"
+
+    - name: playbook var|fact workpath
+      include_tasks: "{{ workspace.local }}/{{ workspace.seedpath }}/ansible-tasks/seed-workpath.fact.yml"
+
+
+    - name: playbook var|all host|change name|deploy container
+      include_tasks: docker-container.test.yml
+      vars:
+        container:
+          name: "test-deploy-{{ inventory_hostname }}-playbook_1"
+          default:
+            files:
+              - dest: "{{ workpath.remote.full }}/playbook_1"
+            envs:
+              - file: test-deploy-playbook_1.container.env
+                content: |
+                  TZ=Asia/Hong_Kong
+            container:
+              image: alpine:3.18
+              command: "tail -f /dev/null"
+
+    - name: playbook var|all host|change name|info container
+      community.docker.docker_container_info:
+        name: "test-deploy-{{ inventory_hostname }}-playbook_1"
+      register: container_info
+
+    - name: playbook var|all host|change name|stat env
+      ansible.builtin.stat:
+        path: "{{ workpath.remote.full }}/test-deploy-playbook_1.container.env"
+      register: env_stat
+
+    - name: playbook var|all host|change name|assert container
+      ansible.builtin.assert:
+        that:
+          - container_info.container.Name is contains(inventory_hostname)
+          - container_info.container.Name is contains('playbook_1')
+          - env_stat.stat.exists
+          - env_stat.stat.path | basename == 'test-deploy-playbook_1.container.env'
+
+    - name: playbook var|all host|change name|remove container
+      community.docker.docker_container:
+        state: absent
+        name: "test-deploy-{{ inventory_hostname }}-playbook_1"
+        keep_volumes: false

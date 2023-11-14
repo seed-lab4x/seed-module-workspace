@@ -6,6 +6,7 @@
   loop:
     - 'test/ansible-tasks/seed-docker/docker-compose.deploy'
     - 'test/ansible-tasks/seed-docker/docker-stack.deploy'
+    - 'test/ansible-tasks/seed-docker/docker-container.deploy'
   when: playbook_dir is contains(item)
   ansible.builtin.set_fact:
     test_redirect: false

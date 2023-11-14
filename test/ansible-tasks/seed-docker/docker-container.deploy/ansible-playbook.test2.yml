@@ -1,0 +1,76 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/4docker/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: docker
+  tasks:
+
+    - name: playbook var|fact workspace
+      include_tasks: "{{ workspace.local }}/seed/ansible-tasks/seed-workspace.fact.yml"
+
+    - name: playbook var|fact workpath
+      include_tasks: "{{ workspace.local }}/{{ workspace.seedpath }}/ansible-tasks/seed-workpath.fact.yml"
+      vars:
+        workpath:
+          path: "{{ workspace.local }}/playbook_2"
+
+
+    - name: playbook var|all host|add var|deploy container
+      include_tasks: docker-container.test.yml
+      vars:
+        container:
+          name: "test-deploy-{{ inventory_hostname }}-playbook_2"
+          vars:
+            files:
+              - dest: "{{ workpath.remote.full }}/playbook_2"
+            volumes:
+              - name: test-deploy-{{ inventory_hostname }}-playbook_2
+                driver: local
+            networks:
+              - name: test-deploy-{{ inventory_hostname }}-playbook_2
+                driver: bridge
+            container:
+              image: alpine:3.18
+              command: "tail -f /dev/null"
+              env:
+                TZ: Asia/Hong_Kong
+              volumes:
+                - test-deploy-{{ inventory_hostname }}-playbook_2:/vol
+              networks:
+                - name: test-deploy-{{ inventory_hostname }}-playbook_2
+          default:
+            files:
+              - dest: "{{ workpath.remote.full }}"
+            container:
+              image: alpine:3.18
+              command: "tail -f /dev/null"
+              env:
+                TZ: Asia/Hong_Kong
+
+    - name: playbook var|all host|add var|info container
+      community.docker.docker_container_info:
+        name: "test-deploy-{{ inventory_hostname }}-playbook_2"
+      register: container_info
+
+    - name: playbook var|all host|add var|assert container
+      ansible.builtin.assert:
+        that:
+          - container_info.container.Name is contains(inventory_hostname)
+          - container_info.container.Name is contains('playbook_2')
+
+    - name: playbook var|all host|add var|remove container
+      community.docker.docker_container:
+        state: absent
+        name: "test-deploy-{{ inventory_hostname }}-playbook_2"
+        keep_volumes: false
+
+    - name: playbook var|all host|add var|remove volume
+      community.docker.docker_volume:
+        state: absent
+        name: test-deploy-{{ inventory_hostname }}-playbook_2
+
+    - name: playbook var|all host|add var|remove network
+      community.docker.docker_network:
+        state: absent
+        name: test-deploy-{{ inventory_hostname }}-playbook_2
