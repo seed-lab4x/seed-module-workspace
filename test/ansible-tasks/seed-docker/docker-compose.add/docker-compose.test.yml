@@ -27,7 +27,9 @@
     ansible.builtin.set_fact:
       _compose: "{{ compose }}"
 
-  - rescue:
+  - vars:
+      any: "{{ _compose.type | default('compose',true) == 'stack' }}"
+    rescue:
     - name: docker-compose.test|rescue any other|fail
       when:
         - _compose | default(None) != None
@@ -47,12 +49,13 @@
     - name: docker-compose.test|stack|add by fact
       when:
         - _compose.type | default('compose',true) == 'stack'
+      run_once: "{{ compose_share.once | default(any) }}"
       community.docker.docker_stack:
         state: present
         name: "{{ _compose.name }}"
         compose: "{{ [_compose.path] | product(_compose.files) | map('join', '/') }}"
 
     - name: docker-compose.test|unfact param
-      run_once: "{{ compose_share.any | default(false) }}"
+      run_once: "{{ compose_share.any | default(any) }}"
       ansible.builtin.set_fact:
         _compose: !!null
