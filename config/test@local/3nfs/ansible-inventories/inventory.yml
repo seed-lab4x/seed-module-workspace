@@ -11,6 +11,9 @@ all:
     node3:
       ansible_host: localhost
       ansible_connection: local
+    # fix inventory_dir is undefined https://github.com/ansible/ansible/issues/31087
+    localhost:
+      ansible_connection: local
 
   children:
     nfs-client:
