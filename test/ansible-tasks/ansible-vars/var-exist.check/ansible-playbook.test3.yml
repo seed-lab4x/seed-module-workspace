@@ -1,0 +1,22 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/4linux/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: linux
+  tasks:
+
+    - name: fact var|fact var
+      set_fact:
+        none_defined: template@fact
+
+    # hostvars only support eval with fact
+    - name: fact var|assert var
+      ansible.builtin.assert:
+        that:
+          - hostvars[inventory_hostname].var_template.name == 'template@fact'
+        msg: "var assert fail 'var_template'"
+        quiet: true
+
+    - name: fact var|debug var
+      debug: msg="{{ hostvars[inventory_hostname].var_template.name }}"

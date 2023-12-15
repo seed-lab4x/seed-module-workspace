@@ -1,0 +1,36 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/4linux/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: linux
+  vars:
+    none_defined: template@play
+  tasks:
+
+    - vars:
+        none_defined: template@block
+      rescue:
+      - name: block var|assert var
+        ansible.builtin.assert:
+          that:
+            - var_template.name == 'template@block'
+          msg: "var assert fail 'var_template'"
+          quiet: true
+
+      - name: block var|debug var
+        debug: msg="{{ var_template.name }}"
+
+      block:
+      - name: block var|debug var by hostvars
+        debug: msg="{{ hostvars[inventory_hostname].var_template.name }}"
+
+      # hostvars not support eval with play/role/task/block var
+      - name: block var|assert var by hostvars
+        vars:
+          none_defined: template@task
+        ansible.builtin.assert:
+          that:
+            - hostvars[inventory_hostname].var_template.name == 'template@task'
+          msg: "var assert fail 'var_template'"
+          quiet: true

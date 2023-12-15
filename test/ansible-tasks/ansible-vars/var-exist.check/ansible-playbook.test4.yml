@@ -1,0 +1,21 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/4linux/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: linux
+  tasks:
+
+    - name: include var|include var
+      include_vars:
+        file: include-vars.yml
+
+    - name: include var|assert var
+      ansible.builtin.assert:
+        that:
+          - hostvars[inventory_hostname].var_template.name == 'template@include'
+        msg: "var assert fail 'var_template'"
+        quiet: true
+
+    - name: include var|debug var
+      debug: msg="{{ hostvars[inventory_hostname].var_template.name }}"

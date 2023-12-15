@@ -1,0 +1,17 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/4linux/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: linux
+  tasks:
+
+    - name: simple host var|assert var
+      ansible.builtin.assert:
+        that:
+          - var_simple | default(None,true) != None
+        msg: "var assert fail 'var_simple'"
+        quiet: true
+
+    - name: simple host var|debug var
+      debug: msg="{{ var_simple }}"

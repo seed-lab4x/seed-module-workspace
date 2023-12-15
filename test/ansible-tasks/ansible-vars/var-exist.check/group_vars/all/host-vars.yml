@@ -1,0 +1,7 @@
+# code: language=ansible
+
+var_simple:
+  name: simple
+
+var_template:
+  name: "{{ none_defined }}"

@@ -1,0 +1,26 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/4linux/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: linux
+  tasks:
+
+    - rescue:
+      - name: host var|assert var by hostvars
+        ansible.builtin.assert:
+          that:
+            - hostvars[inventory_hostname].var_template | default(None,true) != None
+          msg: "var assert fail 'var_template'"
+          quiet: true
+
+      - name: host var|debug var by hostvars
+        debug: msg="{{ hostvars[inventory_hostname].var_template }}"
+
+      block:
+      - name: host var|assert var
+        ansible.builtin.assert:
+          that:
+            - var_template | default(None,true) != None
+          msg: "var assert fail 'var_template'"
+          quiet: true
