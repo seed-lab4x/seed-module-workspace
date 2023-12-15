@@ -103,6 +103,7 @@
       vars:
         compose_share:
           group: docker-manager
+          any: true
         compose:
           type: stack
           name: "{{ _stack_deploy.name | default(workpath.name,true) }}"
