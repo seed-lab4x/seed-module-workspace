@@ -1,0 +1,51 @@
+# code: language=ansible
+---
+
+test4:
+  mounts:
+    - nfs:
+        src: "localhost:/"
+        opts: "vers=4,loud,rw,sync"
+      until:
+        - mount_nfs is succeeded
+      push:
+        - any: true
+          src: "{{ playbook_dir }}/file/file"
+          dest: "file.push"
+  files:
+    - group: docker-manager
+      dest: "{{ workpath.remote.full }}/.env"
+  volumes:
+    - any: true
+      name: test-deploy-any-playbook_4
+      driver: local
+      driver_options:
+        type: nfs
+        device: device=:/
+        o: addr=localhost,rw,nfsvers=4,async
+      push:
+        - any: true
+          src: "{{ playbook_dir }}/file/dir/"
+          dest: "dir.push"
+  networks:
+    - group: docker-manager
+      once: true
+      # any: true
+      name: test-deploy-any-playbook_4
+      recreate: never
+      attachable: true
+      driver: overlay
+      wait:
+        hosts:
+          - host: test-deploy-network-init
+            port: 9000
+        retries: 10
+        delay: 10
+  envs:
+    - group: docker-manager
+      file: .env/all.env
+      template: "{{ playbook_dir }}/template/playbook_4.compose.swarm.env"
+  composes:
+    - group: docker-manager
+      file: "test-deploy-playbook_4.compose.swarm.yml"
+      template: "{{ playbook_dir }}/template/playbook_4.compose.swarm.yml.j2"

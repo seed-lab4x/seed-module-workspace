@@ -22,18 +22,17 @@
         stack:
           name: "test-deploy-{{ inventory_hostname }}-playbook_2"
           path: "{{ workspace.remote }}/playbook_2"
-          vars: {}
-          default:
-            files:
-              - dest: "{{ workspace.remote }}/playbook_2"
-            composes:
-              - file: "test-deploy-playbook_2.compose.swarm.yml"
-                content: |
-                  version: "3.8"
-                  services:
-                    playbook_2:
-                      image: alpine:3.18
-                      command: "tail -f /dev/null"
+          files:
+            - dest: "{{ workspace.remote }}/playbook_2"
+          composes:
+            - file: "test-deploy-playbook_2.compose.swarm.yml"
+              content: |
+                version: "3.8"
+                services:
+                  playbook_2:
+                    image: alpine:3.18
+                    command: "tail -f /dev/null"
+          override: "{{ test2 | default({},true) }}"
 
     - name: playbook var|all host|change path|info service
       when: inventory_hostname in groups['docker-manager']
