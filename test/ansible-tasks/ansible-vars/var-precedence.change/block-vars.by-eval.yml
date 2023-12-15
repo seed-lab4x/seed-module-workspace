@@ -1,0 +1,56 @@
+# code: language=ansible
+---
+
+- vars:
+    param: block var
+    block_vars_param: "{{
+      block_params_by_eval.override.level2
+      | default(block_params_by_eval.default.level2,true) }}"
+  block:
+  - name: include tasks param
+    include_tasks: block-vars.param.yml
+
+- name: debug param
+  debug: msg="{{ block_params_by_eval }}"
+
+
+
+
+
+
+
+
+
+
+# - name: debug param
+#   debug: msg="{{ include_params_by_eval }}"
+
+
+# - name: debug level1 var
+#   debug: msg="{{ include_params_level1_param }}"
+# - name: debug level1 var
+#   debug: msg="{{ include_params_level1_param2 }}"
+
+# # TODO get default var form name
+# - name: debug level1 var
+#   debug:
+#     msg:
+#       - "{{ hostvars[inventory_hostname] }}"
+#       - "{{ hostvars[inventory_hostname]
+#         | json_query(include_params_level1_param2.default_name + '.level2') }}"
+
+# - vars:
+#     param: by block block-vars.level1
+#     include_params_level2_param: "{{
+#       include_params_level1_param.override.level2
+#       | default(include_params_level1_param.default.level2,true) }}"
+#     include_params_level2_param2: "{{
+#       hostvars[inventory_hostname]
+#       | json_query(include_params_level1_param2.override_name + '.level2')
+#       | default(
+#         hostvars[inventory_hostname]
+#         | json_query(include_params_level1_param2.default_name + '.level2')
+#         ,true) }}"
+#   block:
+#   - name: task level1 var
+#     include_tasks: block-vars.level2.yml

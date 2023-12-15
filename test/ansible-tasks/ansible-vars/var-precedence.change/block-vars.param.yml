@@ -1,0 +1,22 @@
+# code: language=ansible
+---
+
+- name: assert block var
+  vars:
+    param: "task param"
+  ansible.builtin.assert:
+    that:
+      - param == 'task param'
+
+- name: fact lazy
+  set_fact:
+    lazy_var: param done
+
+- name: assert block var
+  ansible.builtin.assert:
+    that:
+      - block_vars_param.name == 'level2-default'
+      - block_vars_param.lazy == 'param done'
+
+- name: debug block var
+  debug: msg="{{ block_vars_param }}"

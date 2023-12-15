@@ -1,0 +1,17 @@
+# code: language=ansible
+---
+
+- name: include tasks param
+  include_tasks: include-params.param.yml
+  vars:
+    param: include param
+    include_params_param: "{{
+      hostvars[inventory_hostname]
+      | json_query(include_params_by_name.override + '.level2')
+      | default(
+        hostvars[inventory_hostname]
+        | json_query(include_params_by_name.default + '.level2')
+        ,true) }}"
+
+- name: debug param
+  debug: msg="{{ include_params_by_name }}"
