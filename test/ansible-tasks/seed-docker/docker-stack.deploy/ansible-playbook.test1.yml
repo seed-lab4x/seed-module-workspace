@@ -18,22 +18,20 @@
       vars:
         stack:
           name: "test-deploy-{{ inventory_hostname }}-playbook_1"
-          vars: {}
-          default:
-            files:
-              - dest: "{{ workpath.remote.full }}/playbook_1"
-            envs:
-              - file: test-deploy-playbook_1.compose.swarm.env
-                content: |
-                  TZ=Asia/Hong_Kong
-            composes:
-              - file: test-deploy-playbook_1.compose.swarm.yml
-                content: |
-                  version: "3.8"
-                  services:
-                    playbook_1:
-                      image: alpine:3.18
-                      command: "tail -f /dev/null"
+          files:
+            - dest: "{{ workpath.remote.full }}/playbook_1"
+          envs:
+            - file: test-deploy-playbook_1.compose.swarm.env
+              content: |
+                TZ=Asia/Hong_Kong
+          composes:
+            - file: test-deploy-playbook_1.compose.swarm.yml
+              content: |
+                version: "3.8"
+                services:
+                  playbook_1:
+                    image: alpine:3.18
+                    command: "tail -f /dev/null"
 
     - name: playbook var|all host|change name|info service
       when: inventory_hostname in groups['docker-manager']

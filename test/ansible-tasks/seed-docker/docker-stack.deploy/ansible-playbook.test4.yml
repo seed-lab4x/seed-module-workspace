@@ -16,12 +16,32 @@
           path: "{{ workspace.local }}/playbook_4"
 
 
+    - name: playbook var|all host|init var|include vars
+      ansible.builtin.include_vars:
+        file: include-vars.test4.yml
+
     - name: playbook var|all host|init var|deploy stack
       include_tasks: docker-stack.test.yml
       vars:
         stack:
           name: "test-deploy-{{ inventory_hostname }}-playbook_4"
           path: "{{ workpath.remote.full }}"
+          files:
+            - dest: "{{ workpath.remote.full }}"
+          envs:
+            - group: docker-manager
+              file: test-deploy-playbook_4.compose.swarm.env
+              content: |
+                TZ=Asia/Hong_Kong
+          composes:
+            - group: docker-manager
+              file: test-deploy-playbook_4.compose.swarm.yml
+              content: |
+                version: "3.8"
+                services:
+                  playbook_4:
+                    image: alpine:3.18
+                    command: "tail -f /dev/null"
           share:
             mounts:
               group: docker
@@ -36,71 +56,7 @@
               mode: value
             composes:
               mode: value
-          vars:
-            mounts:
-              - nfs:
-                  src: "localhost:/"
-                  opts: "vers=4,loud,rw,sync"
-                until:
-                  - mount_nfs is succeeded
-                push:
-                  - any: true
-                    src: "{{ playbook_dir }}/file/file"
-                    dest: "file.push"
-            files:
-              - group: docker-manager
-                dest: "{{ workpath.remote.full }}/.env"
-            volumes:
-              - any: true
-                name: test-deploy-any-playbook_4
-                driver: local
-                driver_options:
-                  type: nfs
-                  device: device=:/
-                  o: addr=localhost,rw,nfsvers=4,async
-                push:
-                  - any: true
-                    src: "{{ playbook_dir }}/file/dir/"
-                    dest: "dir.push"
-            networks:
-              - group: docker-manager
-                once: true
-                # any: true
-                name: test-deploy-any-playbook_4
-                recreate: never
-                attachable: true
-                driver: overlay
-                wait:
-                  hosts:
-                    - host: test-deploy-network-init
-                      port: 9000
-                  retries: 10
-                  delay: 10
-            envs:
-              - group: docker-manager
-                file: .env/all.env
-                template: "{{ playbook_dir }}/template/playbook_4.compose.swarm.env"
-            composes:
-              - group: docker-manager
-                file: "test-deploy-playbook_4.compose.swarm.yml"
-                template: "{{ playbook_dir }}/template/playbook_4.compose.swarm.yml.j2"
-          default:
-            files:
-              - dest: "{{ workpath.remote.full }}"
-            envs:
-              - group: docker-manager
-                file: test-deploy-playbook_4.compose.swarm.env
-                content: |
-                  TZ=Asia/Hong_Kong
-            composes:
-              - group: docker-manager
-                file: test-deploy-playbook_4.compose.swarm.yml
-                content: |
-                  version: "3.8"
-                  services:
-                    playbook_4:
-                      image: alpine:3.18
-                      command: "tail -f /dev/null"
+          override: "{{ test4 | default({},true) }}"
 
     - name: playbook var|all host|init var|info service
       when: inventory_hostname in groups['docker-manager']
