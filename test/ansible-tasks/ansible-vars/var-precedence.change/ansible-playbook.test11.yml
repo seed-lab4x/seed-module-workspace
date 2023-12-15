@@ -1,0 +1,21 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/4linux/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: linux
+  tasks:
+
+    - name: include vars
+      ansible.builtin.include_vars:
+        file: include-vars.yml
+        name: default
+
+    - vars:
+        param: block var by playbook
+        block_params_by_name:
+          override: params
+          default: default
+      block:
+      - name: include tasks by-name
+        include_tasks: block-vars.by-name.yml

@@ -1,0 +1,13 @@
+# code: language=ansible
+---
+
+- name: include tasks param
+  include_tasks: include-params.param.yml
+  vars:
+    param: include param
+    include_params_param: "{{
+      include_params_by_eval.override.level2 
+      | default(include_params_by_eval.default.level2,true) }}"
+
+- name: debug param
+  debug: msg="{{ include_params_by_eval }}"

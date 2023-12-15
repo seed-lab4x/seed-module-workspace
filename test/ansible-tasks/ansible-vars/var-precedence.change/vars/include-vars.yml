@@ -1,0 +1,6 @@
+# code: language=ansible
+
+name: level1-default
+level2:
+  name: level2-default
+  lazy: "{{ lazy_var }}"

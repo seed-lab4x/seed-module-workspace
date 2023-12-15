@@ -1,0 +1,23 @@
+# code: language=ansible
+---
+
+- name: assert include param
+  vars:
+    # cant override include params
+    param: "task param"
+  ansible.builtin.assert:
+    that:
+      - param == 'include param'
+
+- name: fact lazy
+  set_fact:
+    lazy_var: param done
+
+- name: assert include param
+  ansible.builtin.assert:
+    that:
+      - include_params_param.name == 'level2-default'
+      - include_params_param.lazy == 'param done'
+
+- name: debug include param
+  debug: msg="{{ include_params_param }}"

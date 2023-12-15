@@ -1,0 +1,22 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/4linux/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: linux
+  vars:
+    default: 
+      name: level1-default
+      level2:
+        name: level2-default
+        lazy: "{{ lazy_var }}"
+  tasks:
+
+    - vars:
+        param: block var by playbook
+        block_params_by_eval:
+          override: "{{ params | default({},true) }}"
+          default: "{{ default }}"
+      block:
+      - name: include tasks by-eval
+        include_tasks: block-vars.by-eval.yml
