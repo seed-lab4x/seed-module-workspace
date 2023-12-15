@@ -29,6 +29,7 @@ ssh:
   group: none
 
 system:
+  group: docker
 
 docker:
   package:
