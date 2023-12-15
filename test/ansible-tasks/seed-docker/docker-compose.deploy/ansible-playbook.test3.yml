@@ -22,7 +22,21 @@
         compose:
           name: "test-deploy-{{ inventory_hostname }}-playbook_3"
           path: "{{ workpath.remote.full }}"
-          vars:
+          files:
+            - dest: "{{ workpath.remote.full }}"
+          envs:
+            - file: test-deploy-playbook_3.compose.env
+              content: |
+                TZ=Asia/Hong_Kong
+          composes:
+            - file: test-deploy-playbook_3.compose.yml
+              content: |
+                version: "3.8"
+                services:
+                  playbook_3:
+                    image: alpine:3.18
+                    command: "tail -f /dev/null"
+          override:
             files:
               - dest: "{{ workpath.remote.full }}/.env"
             volumes:
@@ -56,21 +70,6 @@
                         - vol:/vol
                       networks:
                         - net
-          default:
-            files:
-              - dest: "{{ workpath.remote.full }}"
-            envs:
-              - file: test-deploy-playbook_3.compose.env
-                content: |
-                  TZ=Asia/Hong_Kong
-            composes:
-              - file: test-deploy-playbook_3.compose.yml
-                content: |
-                  version: "3.8"
-                  services:
-                    playbook_3:
-                      image: alpine:3.18
-                      command: "tail -f /dev/null"
 
     - name: playbook var|all host|add var|info container
       community.docker.docker_container_info:

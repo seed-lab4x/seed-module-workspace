@@ -18,22 +18,20 @@
       vars:
         compose:
           name: "test-deploy-{{ inventory_hostname }}-playbook_1"
-          vars: {}
-          default:
-            files:
-              - dest: "{{ workpath.remote.full }}/playbook_1"
-            envs:
-              - file: test-deploy-playbook_1.compose.env
-                content: |
-                  TZ=Asia/Hong_Kong
-            composes:
-              - file: test-deploy-playbook_1.compose.yml
-                content: |
-                  version: "3.8"
-                  services:
-                    playbook_1:
-                      image: alpine:3.18
-                      command: "tail -f /dev/null"
+          files:
+            - dest: "{{ workpath.remote.full }}/playbook_1"
+          envs:
+            - file: test-deploy-playbook_1.compose.env
+              content: |
+                TZ=Asia/Hong_Kong
+          composes:
+            - file: test-deploy-playbook_1.compose.yml
+              content: |
+                version: "3.8"
+                services:
+                  playbook_1:
+                    image: alpine:3.18
+                    command: "tail -f /dev/null"
 
     - name: playbook var|all host|change name|info container
       community.docker.docker_container_info:
