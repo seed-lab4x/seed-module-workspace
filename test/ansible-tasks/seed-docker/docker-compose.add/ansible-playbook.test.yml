@@ -46,7 +46,7 @@
         compose:
           name: "test-add-{{ inventory_hostname }}-playbook_1"
           type: stack
-          path: "{{ playbook_dir }}/compose/any{{ '' if(inventory_hostname == 'node3') else 'none' }}"
+          path: "{{ playbook_dir }}/compose/any"
           files:
             - "docker-compose-swarm.yml"
 
@@ -57,13 +57,18 @@
       register: service_info
 
     - name: playbook var|any|assert stack host node1
-      when: inventory_hostname == 'node1'
+      when:
+        - inventory_hostname == 'node1'
+        - service_info.service.Spec.Name is defined
       ansible.builtin.assert:
         that:
-          - service_info.service.Spec.Name is undefined
+          - service_info.service.Spec.Name is contains(inventory_hostname)
+          - service_info.service.Spec.Name is contains('playbook_1')
 
     - name: playbook var|any|assert stack host node3
-      when: inventory_hostname == 'node3'
+      when:
+        - inventory_hostname == 'node3'
+        - service_info.service.Spec.Name is defined
       ansible.builtin.assert:
         that:
           - service_info.service.Spec.Name is contains(inventory_hostname)
