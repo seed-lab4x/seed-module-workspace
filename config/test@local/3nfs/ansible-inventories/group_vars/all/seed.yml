@@ -19,6 +19,7 @@ ssh:
   group: none
 
 system:
+  group: nfs-client
 
 docker:
   package:
