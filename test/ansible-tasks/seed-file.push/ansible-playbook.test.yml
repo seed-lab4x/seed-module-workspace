@@ -90,11 +90,17 @@
         file:
           src: "{{ playbook_dir }}/file/{{ 'file' if(inventory_hostname == 'node3') else 'none' }}"
           dest: "{{ workspace.remote }}/test-from-playbook_3/"
+          redirect: "{{ workspace.remote }}/test-from-playbook_3/file.redirect"
 
     - name: playbook var|any|stat file
       ansible.builtin.stat:
         path: "{{ workspace.remote }}/test-from-playbook_3/file"
       register: file_stat
+
+    - name: playbook var|any|stat redirect
+      ansible.builtin.stat:
+        path: "{{ workspace.remote }}/test-from-playbook_3/file.redirect"
+      register: redirect_stat
 
     - name: playbook var|any|assert file host node3
       when: inventory_hostname == 'node3'
@@ -103,6 +109,9 @@
           - file_stat.stat.exists
           - file_stat.stat.path | basename == 'file'
           - not file_stat.stat.isdir
+          - redirect_stat.stat.exists
+          - redirect_stat.stat.path | basename == 'file.redirect'
+          - not redirect_stat.stat.isdir
 
     - name: playbook var|any|assert file host node4
       when: inventory_hostname == 'node4'
