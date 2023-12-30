@@ -1,0 +1,95 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/4linux/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: all
+  vars:
+    var:
+      - name: base
+        file: "{{ playbook_dir }}/ansible-vars.base.yml"
+      - name: base_module1
+        file: "{{ playbook_dir }}/ansible-vars.module1.yml"
+        matcher:
+          - "{{ profiles is contains('module1') }}"
+      - name: base_module1_module2
+        file: "{{ playbook_dir }}/ansible-vars.module1+module2.yml"
+        matcher:
+          - "{{ profiles is contains('module1') }}"
+          - "{{ profiles is contains('module2') }}"
+      - name: base_module2
+        file: "{{ playbook_dir }}/ansible-vars.module2.yml"
+        matcher:
+          - "{{ profiles is contains('module2') }}"
+  tasks:
+
+    - name: playbook var|only base|include var
+      ansible.builtin.include_tasks: seed-var.test.yml
+      vars:
+        profiles: []
+
+    - name: playbook var|only base|assert fact
+      ansible.builtin.assert:
+        that:
+          - base.root.name == 'base'
+
+
+    - name: playbook var|module1|include var
+      ansible.builtin.include_tasks: seed-var.test.yml
+      vars:
+        profiles:
+          - module1
+
+    - name: playbook var|module1|assert fact
+      ansible.builtin.assert:
+        that:
+          - base_module1.root.name == 'module1'
+
+
+    - name: playbook var|module1+module2|include var
+      ansible.builtin.include_tasks: seed-var.test.yml
+      vars:
+        profiles:
+          - module1
+          - module2
+
+    - name: playbook var|module1_module2|assert fact
+      ansible.builtin.assert:
+        that:
+          - base_module1_module2.root.name == 'module1+module2'
+
+
+    - name: playbook var|module2|include var
+      ansible.builtin.include_tasks: seed-var.test.yml
+      vars:
+        profiles:
+          - module2
+
+    - name: playbook var|module2|assert fact
+      ansible.builtin.assert:
+        that:
+          - base_module2.root.name == 'module2'
+
+
+    - name: playbook var|template|include var
+      ansible.builtin.include_tasks: seed-var.test.yml
+      vars:
+        profiles:
+          - module1
+          - module2
+        var:
+          - name: template
+            file: "{{ playbook_dir }}/build/ansible-vars.template.yml"
+            # file: "{{ inventory_dir }}/../seed/ansible-vars.template.yml"
+            template: "{{ playbook_dir }}/ansible-vars.template.yml.j2"
+            local: true
+            once: true
+            matcher:
+              - true
+
+    - name: playbook var|template|assert fact
+      ansible.builtin.assert:
+        that:
+          - template.root.name == 'module1+module2'
+          - template.root.module1 == true
+          - template.root.module2 == 'enable'

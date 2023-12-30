@@ -1,0 +1,18 @@
+
+root:
+<% if 'module1' in profiles and 'module2' in profiles %>
+  name: "module1+module2"
+<% elif 'module1' in profiles %>
+  name: "module1"
+<% elif 'module2' in profiles %>
+  name: "module2"
+<% endif %>
+  path: "{{ playbook_dir }}"
+
+<% if 'module1' in profiles %>
+  module1: true
+<% endif %>
+
+<% if 'module2' in profiles %>
+  module2: "enable"
+<% endif %>
