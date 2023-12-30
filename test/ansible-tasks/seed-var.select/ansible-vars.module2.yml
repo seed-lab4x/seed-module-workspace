@@ -1,0 +1,4 @@
+# code: language=ansible
+
+root:
+  name: module2
