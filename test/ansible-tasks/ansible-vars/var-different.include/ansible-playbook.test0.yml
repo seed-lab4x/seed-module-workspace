@@ -1,0 +1,17 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/4linux/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: linux
+  tasks:
+
+    - name: include same file for different host
+      ansible.builtin.include_vars:
+        file: include-vars.yml
+        name: different
+
+    - name: assert different var different host
+      ansible.builtin.assert:
+        that:
+          - different.name == inventory_hostname
