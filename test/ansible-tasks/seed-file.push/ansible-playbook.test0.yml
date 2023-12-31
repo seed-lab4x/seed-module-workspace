@@ -1,0 +1,86 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/4linux/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: all
+  tasks:
+
+    - name: playbook var|all host|push make dir
+      include_tasks: seed-file.test.yml
+      vars:
+        file:
+          path: "{{ workspace.remote }}/test-from-playbook_0/dir.mkdir"
+
+    - name: playbook var|all host|stat make dir
+      loop:
+        - "{{ workspace.remote }}/test-from-playbook_0/dir.mkdir"
+        - "{{ workspace.remote }}/test-from-playbook_0/dir.mkdir/file1"
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: dir_make_stat
+
+    - name: playbook var|all host|assert make dir
+      ansible.builtin.assert:
+        that:
+          - dir_make_stat.results[0].stat.exists
+          - dir_make_stat.results[0].stat.isdir
+          - dir_make_stat.results[0].stat.path | basename == 'dir.mkdir'
+          - dir_make_stat.results[1].stat.exists == false
+
+
+    - name: playbook var|all host|push copy dir
+      include_tasks: seed-file.test.yml
+      vars:
+        file:
+          path: "{{ workspace.remote }}/test-from-playbook_0/dir.copy"
+          copy: "{{ playbook_dir }}/file/dir/"
+
+    - name: playbook var|all host|stat copy dir
+      loop:
+        - "{{ workspace.remote }}/test-from-playbook_0/dir.copy"
+        - "{{ workspace.remote }}/test-from-playbook_0/dir.copy/file1"
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: dir_copy_stat
+
+    - name: playbook var|all host|assert copy dir
+      ansible.builtin.assert:
+        that:
+          - dir_copy_stat.results[0].stat.exists
+          - dir_copy_stat.results[0].stat.isdir
+          - dir_copy_stat.results[0].stat.path | basename == 'dir.copy'
+          - dir_copy_stat.results[1].stat.exists
+          - dir_copy_stat.results[1].stat.isdir == false
+          - dir_copy_stat.results[1].stat.path | basename == 'file1'
+
+
+    - name: playbook var|all host|push sync dir
+      include_tasks: seed-file.test.yml
+      vars:
+        file:
+          path: "{{ workspace.remote }}/test-from-playbook_0/dir.sync"
+          sync: "{{ playbook_dir }}/file/dir/"
+
+    - name: playbook var|all host|stat sync dir
+      loop:
+        - "{{ workspace.remote }}/test-from-playbook_0/dir.sync"
+        - "{{ workspace.remote }}/test-from-playbook_0/dir.sync/file1"
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: dir_sync_stat
+
+    - name: playbook var|all host|assert sync dir
+      ansible.builtin.assert:
+        that:
+          - dir_sync_stat.results[0].stat.exists
+          - dir_sync_stat.results[0].stat.isdir
+          - dir_sync_stat.results[0].stat.path | basename == 'dir.sync'
+          - dir_sync_stat.results[1].stat.exists
+          - dir_sync_stat.results[1].stat.isdir == false
+          - dir_sync_stat.results[1].stat.path | basename == 'file1'
+
+    - name: playbook var|all host|clean
+      ansible.builtin.file:
+        state: absent
+        path: "{{ workspace.remote }}/test-from-playbook_0"
