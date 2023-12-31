@@ -1,0 +1,133 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/4linux/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: all
+  tasks:
+
+    - name: playbook var|all host|copy remote file
+      include_tasks: seed-file.test.yml
+      vars:
+        file:
+          path: "{{ workspace.remote }}/test-from-playbook_3/file"
+          copy: "{{ playbook_dir }}/file/"
+
+
+    - name: playbook var|all host|push redirect file
+      include_tasks: seed-file.test.yml
+      vars:
+        file:
+          path: "{{ workspace.remote }}/test-from-playbook_3/file.redirect"
+          redirect: "{{ workspace.remote }}/test-from-playbook_3/file/file"
+          local: false
+
+    - name: playbook var|all host|stat redirect file
+      ansible.builtin.stat:
+        path: "{{ workspace.remote }}/test-from-playbook_3/file.redirect"
+      register: file_redirect_stat
+
+    - name: playbook var|all host|push redirect file again
+      include_tasks: seed-file.test.yml
+      vars:
+        file:
+          path: "{{ workspace.remote }}/test-from-playbook_3/file.redirect"
+          redirect: "{{ workspace.remote }}/test-from-playbook_3/file/file"
+          local: false
+
+    - name: playbook var|all host|stat redirect file again
+      ansible.builtin.stat:
+        path: "{{ workspace.remote }}/test-from-playbook_3/file.redirect"
+      register: file_redirect_stat_again
+
+    - name: playbook var|all host|assert redirect file
+      ansible.builtin.assert:
+        that:
+          - file_redirect_stat.stat.exists
+          - file_redirect_stat.stat.path | basename == 'file.redirect'
+          - file_redirect_stat.stat.inode == file_redirect_stat_again.stat.inode
+
+
+    - name: playbook var|all host|push template file
+      include_tasks: seed-file.test.yml
+      vars:
+        file:
+          path: "{{ workspace.remote }}/test-from-playbook_3/file.template"
+          template: "{{ workspace.remote }}/test-from-playbook_3/file/file.j2"
+          local: false
+
+    - name: playbook var|all host|stat template file
+      ansible.builtin.stat:
+        path: "{{ workspace.remote }}/test-from-playbook_3/file.template"
+      register: file_template_stat
+
+    - name: playbook var|all host|assert template file
+      ansible.builtin.assert:
+        that:
+          - file_template_stat.stat.exists
+          - file_template_stat.stat.path | basename == 'file.template'
+
+
+    - name: playbook var|all host|push content file
+      include_tasks: seed-file.test.yml
+      vars:
+        file:
+          path: "{{ workspace.remote }}/test-from-playbook_3/file.content"
+          content: "pushed file by {{ inventory_hostname }} content"
+          local: false
+
+    - name: playbook var|all host|stat content file
+      ansible.builtin.stat:
+        path: "{{ workspace.remote }}/test-from-playbook_3/file.content"
+      register: file_content_stat
+
+    - name: playbook var|all host|assert content file
+      ansible.builtin.assert:
+        that:
+          - file_content_stat.stat.exists
+          - file_content_stat.stat.path | basename == 'file.content'
+
+
+    - name: playbook var|all host|push copy file
+      include_tasks: seed-file.test.yml
+      vars:
+        file:
+          path: "{{ workspace.remote }}/test-from-playbook_3/file.copy"
+          copy: "{{ workspace.remote }}/test-from-playbook_3/file/file"
+          local: false
+
+    - name: playbook var|all host|stat copy file
+      ansible.builtin.stat:
+        path: "{{ workspace.remote }}/test-from-playbook_3/file.copy"
+      register: file_copy_stat
+
+    - name: playbook var|all host|assert copy dir
+      ansible.builtin.assert:
+        that:
+          - file_copy_stat.stat.exists
+          - file_copy_stat.stat.path | basename == 'file.copy'
+
+
+    - name: playbook var|all host|push sync file
+      include_tasks: seed-file.test.yml
+      vars:
+        file:
+          path: "{{ workspace.remote }}/test-from-playbook_3/file.sync"
+          sync: "{{ workspace.remote }}/test-from-playbook_3/file/file"
+          local: false
+
+    - name: playbook var|all host|stat sync dir
+      ansible.builtin.stat:
+        path: "{{ workspace.remote }}/test-from-playbook_3/file.sync"
+      register: file_sync_stat
+
+    - name: playbook var|all host|assert sync dir
+      ansible.builtin.assert:
+        that:
+          - file_sync_stat.stat.exists
+          - file_sync_stat.stat.path | basename == 'file.sync'
+
+    - name: playbook var|all host|clean
+      ansible.builtin.file:
+        state: absent
+        path: "{{ workspace.remote }}/test-from-playbook_3"
