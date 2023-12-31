@@ -27,7 +27,7 @@
           name: "test-deploy-{{ inventory_hostname }}-playbook_4"
           path: "{{ workpath.remote.full }}"
           files:
-            - dest: "{{ workpath.remote.full }}"
+            - path: "{{ workpath.remote.full }}"
           envs:
             - group: docker-manager
               file: test-deploy-playbook_4.compose.swarm.env

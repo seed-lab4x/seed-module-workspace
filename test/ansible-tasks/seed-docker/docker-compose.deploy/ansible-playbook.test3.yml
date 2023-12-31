@@ -23,7 +23,7 @@
           name: "test-deploy-{{ inventory_hostname }}-playbook_3"
           path: "{{ workpath.remote.full }}"
           files:
-            - dest: "{{ workpath.remote.full }}"
+            - path: "{{ workpath.remote.full }}"
           envs:
             - file: test-deploy-playbook_3.compose.env
               content: |
@@ -38,7 +38,7 @@
                     command: "tail -f /dev/null"
           override:
             files:
-              - dest: "{{ workpath.remote.full }}/.env"
+              - path: "{{ workpath.remote.full }}/.env"
             volumes:
               - name: test-deploy-{{ inventory_hostname }}-playbook_3
                 driver: local

@@ -13,7 +13,7 @@ test4:
           src: "{{ playbook_dir }}/file/file"
           dest: "file.push"
   files:
-    - dest: "{{ workpath.remote.full }}/.env"
+    - path: "{{ workpath.remote.full }}/.env"
   volumes:
     - name: test-deploy-any-playbook_4
       driver: local

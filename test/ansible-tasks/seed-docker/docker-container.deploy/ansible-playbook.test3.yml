@@ -22,7 +22,7 @@
         container:
           name: "test-deploy-{{ inventory_hostname }}-playbook_3"
           files:
-            - dest: "{{ workpath.remote.full }}"
+            - path: "{{ workpath.remote.full }}"
           container:
             image: alpine:3.18
             command: "tail -f /dev/null"
@@ -46,7 +46,7 @@
                     src: "{{ playbook_dir }}/file/file"
                     dest: "file.push"
             files:
-              - dest: "{{ workpath.remote.full }}/.env"
+              - path: "{{ workpath.remote.full }}/.env"
             volumes:
               - name: test-deploy-any-playbook_3
                 driver: local

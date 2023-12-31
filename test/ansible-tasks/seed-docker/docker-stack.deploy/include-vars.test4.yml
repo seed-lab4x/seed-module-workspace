@@ -14,7 +14,7 @@ test4:
           dest: "file.push"
   files:
     - group: docker-manager
-      dest: "{{ workpath.remote.full }}/.env"
+      path: "{{ workpath.remote.full }}/.env"
   volumes:
     - any: true
       name: test-deploy-any-playbook_4
