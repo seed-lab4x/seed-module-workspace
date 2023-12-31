@@ -21,7 +21,14 @@
       vars:
         container:
           name: "test-deploy-{{ inventory_hostname }}-playbook_2"
-          vars:
+          files:
+            - dest: "{{ workpath.remote.full }}"
+          container:
+            image: alpine:3.18
+            command: "tail -f /dev/null"
+            env:
+              TZ: Asia/Hong_Kong
+          override:
             files:
               - dest: "{{ workpath.remote.full }}/playbook_2"
             volumes:
@@ -39,14 +46,6 @@
                 - test-deploy-{{ inventory_hostname }}-playbook_2:/vol
               networks:
                 - name: test-deploy-{{ inventory_hostname }}-playbook_2
-          default:
-            files:
-              - dest: "{{ workpath.remote.full }}"
-            container:
-              image: alpine:3.18
-              command: "tail -f /dev/null"
-              env:
-                TZ: Asia/Hong_Kong
 
     - name: playbook var|all host|add var|info container
       community.docker.docker_container_info:
