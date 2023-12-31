@@ -21,13 +21,20 @@
       vars:
         container:
           name: "test-deploy-{{ inventory_hostname }}-playbook_3"
+          files:
+            - dest: "{{ workpath.remote.full }}"
+          container:
+            image: alpine:3.18
+            command: "tail -f /dev/null"
+            env:
+              TZ: Asia/Hong_Kong
           share:
             mounts:
               group: docker
               mode: value
             volumes:
               mode: value
-          vars:
+          override:
             mounts:
               - nfs:
                   src: "localhost:/"
@@ -70,14 +77,6 @@
                 - test-deploy-any-playbook_3:/vol
               networks:
                 - name: test-deploy-{{ inventory_hostname }}-playbook_3
-          default:
-            files:
-              - dest: "{{ workpath.remote.full }}"
-            container:
-              image: alpine:3.18
-              command: "tail -f /dev/null"
-              env:
-                TZ: Asia/Hong_Kong
 
     - name: playbook var|all host|init var|info container
       community.docker.docker_container_info:
