@@ -19,7 +19,7 @@
         container:
           name: "test-deploy-{{ inventory_hostname }}-playbook_1"
           files:
-            - dest: "{{ workpath.remote.full }}/playbook_1"
+            - path: "{{ workpath.remote.full }}/playbook_1"
           envs:
             - file: test-deploy-playbook_1.container.env
               content: |

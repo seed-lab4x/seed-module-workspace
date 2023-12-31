@@ -22,7 +22,7 @@
         container:
           name: "test-deploy-{{ inventory_hostname }}-playbook_2"
           files:
-            - dest: "{{ workpath.remote.full }}"
+            - path: "{{ workpath.remote.full }}"
           container:
             image: alpine:3.18
             command: "tail -f /dev/null"
@@ -30,7 +30,7 @@
               TZ: Asia/Hong_Kong
           override:
             files:
-              - dest: "{{ workpath.remote.full }}/playbook_2"
+              - path: "{{ workpath.remote.full }}/playbook_2"
             volumes:
               - name: test-deploy-{{ inventory_hostname }}-playbook_2
                 driver: local

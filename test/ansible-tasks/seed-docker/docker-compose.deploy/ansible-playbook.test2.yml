@@ -23,7 +23,7 @@
           name: "test-deploy-{{ inventory_hostname }}-playbook_2"
           path: "{{ workspace.remote }}/playbook_2"
           files:
-            - dest: "{{ workspace.remote }}/playbook_2"
+            - path: "{{ workspace.remote }}/playbook_2"
           composes:
             - file: "test-deploy-playbook_2.compose.yml"
               content: |
