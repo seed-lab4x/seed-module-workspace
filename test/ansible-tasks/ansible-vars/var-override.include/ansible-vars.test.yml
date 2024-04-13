@@ -1,0 +1,19 @@
+# code: language=ansible
+---
+
+root.a.b.c.override:
+  d1: "override"
+
+root.a.b.c.default:
+  d1: "default"
+  d2: "default"
+
+root.a.b.c.mix:
+  d1: "{{
+    lookup('vars', 'root.a.b.c.override').d1 | default(None) or
+    lookup('vars', 'root.a.b.c.default').d1 | default(None) or
+    [] }}"
+  d2: "{{
+    lookup('vars', 'root.a.b.c.override').d2 | default(None) or
+    lookup('vars', 'root.a.b.c.default').d2 | default(None) or
+    [] }}"

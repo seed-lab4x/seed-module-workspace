@@ -1,0 +1,39 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/4docker/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: localhost
+  tasks:
+
+    - name: include vars
+      run_once: true
+      ansible.builtin.include_vars:
+        file: ansible-vars.test.yml
+
+    - name: assert 'root.a.b.c.default' 'root.a.b.c.override'
+      ansible.builtin.assert:
+        that:
+          - lookup('vars', 'root.a.b.c.default', default='') != ''
+          - lookup('vars', 'root.a.b.c.override', default='') != ''
+        msg: "var eval fail 'root.a.b.c.default' 'root.a.b.c.override'"
+        quiet: true
+      ignore_errors: true
+
+    - vars:
+        root:
+          a:
+            b:
+              c: "{{ lookup('vars', 'root.a.b.c.mix') }}"
+      block:
+        - name: assert root.a.b.c
+          ansible.builtin.assert:
+            that:
+              - root.a.b.c is defined
+              - root.a.b.c.d1 is defined
+              - root.a.b.c.d2 is defined
+            msg: "var eval fail 'root.a.b.c' 'root.a.b.c.d1' 'root.a.b.c.d2'"
+            quiet: true
+          ignore_errors: true
+
+        - debug: msg="{{ root.a.b.c }}"

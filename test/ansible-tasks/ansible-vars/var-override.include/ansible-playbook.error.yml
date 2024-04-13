@@ -1,0 +1,21 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/4docker/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: localhost
+  tasks:
+
+    # https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_variables.html#creating-valid-variable-names
+    - name: valid variable name 
+      vars:
+        root.a.b.c1: "1"
+        _root.a.b.c2: "2"
+        'root.a.b.c3': "3"
+        '_root.a.b.c4': "4"
+      ansible.builtin.assert:
+        that:
+          - lookup('vars', 'root.a.b.c1', default='') != ''
+        msg: "var eval fail 'root.a.b.c1'"
+        quiet: true
+      ignore_errors: true
