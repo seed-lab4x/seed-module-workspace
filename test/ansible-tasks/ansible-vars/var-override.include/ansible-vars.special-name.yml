@@ -3,6 +3,11 @@
 
 root.a.b.c.override:
   d1: "override"
+  d3:
+    name: "override"
+    flow.group: all
+    flow.once: false
+    flow.any: true
 
 root.a.b.c.default:
   d1: "default"
@@ -16,4 +21,8 @@ root.a.b.c.mix:
   d2: "{{
     lookup('vars', 'root.a.b.c.override').d2 | default(None) or
     lookup('vars', 'root.a.b.c.default').d2 | default(None) or
+    [] }}"
+  d3: "{{
+    lookup('vars', 'root.a.b.c.override').d3 | default(None) or
+    lookup('vars', 'root.a.b.c.default').d3 | default(None) or
     [] }}"

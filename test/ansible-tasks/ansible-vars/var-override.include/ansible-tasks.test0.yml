@@ -1,0 +1,20 @@
+# code: language=ansible
+---
+
+- vars:
+    root:
+      include_tasks: true
+      a:
+        b:
+          c: "include tasks vars"
+  block:
+    - name: assert include tasks vars
+      ansible.builtin.assert:
+        that:
+          - root.include_tasks is defined
+          - root.a.b.c == "include tasks vars"
+        msg: "var eval fail 'root.include_tasks'"
+        quiet: true
+
+    - name: debug include tasks vars
+      debug: msg="{{ root }}"

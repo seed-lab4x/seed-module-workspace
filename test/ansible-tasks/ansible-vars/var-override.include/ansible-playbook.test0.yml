@@ -1,0 +1,46 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/4docker/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: localhost
+  vars:
+    root:
+      playbook: true
+      a:
+        b:
+          c: "playbook vars"
+  tasks:
+
+    - name: assert playbook vars
+      ansible.builtin.assert:
+        that:
+          - root.playbook is defined
+          - root.a.b.c == "playbook vars"
+        msg: "var eval fail 'root.playbook'"
+        quiet: true
+
+    - name: debug playbook vars
+      debug: msg="{{ root }}"
+
+    - vars:
+        root:
+          tasks: true
+          a:
+            b:
+              c: "tasks vars"
+      block:
+        - name: assert tasks vars
+          ansible.builtin.assert:
+            that:
+              - root.tasks is defined
+              - root.a.b.c == "tasks vars"
+            msg: "var eval fail 'root.tasks'"
+            quiet: true
+
+        - name: debug tasks vars
+          debug: msg="{{ root }}"
+
+        - name: include tesks
+          include_tasks: ansible-tasks.test0.yml
+

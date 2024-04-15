@@ -6,10 +6,10 @@
   hosts: localhost
   tasks:
 
-    - name: include vars
+    - name: include vars special name
       run_once: true
       ansible.builtin.include_vars:
-        file: ansible-vars.test.yml
+        file: ansible-vars.special-name.yml
 
     - name: assert 'root.a.b.c.default' 'root.a.b.c.override'
       ansible.builtin.assert:
@@ -26,7 +26,7 @@
             b:
               c: "{{ lookup('vars', 'root.a.b.c.mix') }}"
       block:
-        - name: assert root.a.b.c
+        - name: assert tasks vars root.a.b.c
           ansible.builtin.assert:
             that:
               - root.a.b.c is defined
@@ -36,4 +36,18 @@
             quiet: true
           ignore_errors: true
 
-        - debug: msg="{{ root.a.b.c }}"
+        - name: debug root.a.b.c
+          debug: msg="{{ root.a.b.c }}"
+
+        - name: debug root.a.b.c.d3
+          vars:
+            keys_keep: "{{ root.a.b.c.d3.keys() | map('regex_search','flow\\..*') | select() }}"
+            keys_rename: "{{ keys_keep | map('regex_replace','flow\\.','') | select() }}"
+            values_keep: "{{ keys_keep | map('extract', root.a.b.c.d3) | list }}"
+            args: "{{ dict(keys_rename | zip(values_keep)) }}"
+          debug:
+            msg:
+              - "{{ keys_keep }}"
+              - "{{ keys_rename }}"
+              - "{{ values_keep }}"
+              - "{{ args }}"

@@ -1,0 +1,7 @@
+# code: language=ansible
+---
+
+root:
+  include: true
+  b:
+    c: "include vars"
