@@ -1,0 +1,15 @@
+# code: language=ansible
+---
+
+- name: ansible-tasks.debug-item|fact included times
+  run_once: true
+  ansible.builtin.set_fact:
+    included_times: "{{ included_times | default(0) | int + 1 }}"
+
+- name: ansible-tasks.debug-item|debug item
+  ansible.builtin.debug:
+    msg: "item: {{ item }}"
+
+- name: ansible-tasks.debug-item|fact included results
+  ansible.builtin.set_fact:
+    included_results: "{{ included_results | default([]) + [item] }}"

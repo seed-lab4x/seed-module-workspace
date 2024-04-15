@@ -1,0 +1,202 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/4linux/ansible-inventories
+# code: language=ansible
+---
+
+- name: test
+  hosts: all
+  tasks:
+
+    - vars:
+        list:
+          - "value1"
+          - "value2@{{ inventory_hostname }}"
+      block:
+      # step1: evaluate all hosts loop value
+      # host: node1
+      # loop: [ 'value1','value2@node1' ]
+      # -----------------
+      # host: node2
+      # loop: [ 'value1','value2@node2' ]
+      # -----------------
+      # host: node3
+      # loop: [ 'value1','value2@node3' ]
+      # -----------------
+      # host: node4
+      # loop: [ 'value1','value2@node4' ]
+      # -----------------
+      # 
+      # step2: get related hosts based on same value
+      # loop:
+      #   - 'value1': [ node1, node2, node3, node4 ]
+      #   - 'value2@node1': [ node1 ]
+      #   - 'value2@node2': [ node2 ]
+      #   - 'value2@node3': [ node3 ]
+      #   - 'value2@node4': [ node4 ]
+      - name: loop different vars each hosts|include tasks
+        loop: "{{ list }}"
+        include_tasks: some-tasks/ansible-tasks.debug-item.yml
+
+      - name: loop different vars each hosts|assert included_results
+        run_once: true
+        ansible.builtin.assert:
+          that:
+            - hostvars['node1'].included_results | length == 2
+            - hostvars['node2'].included_results | length == 2
+            - hostvars['node3'].included_results | length == 2
+            - hostvars['node4'].included_results | length == 2
+
+      - name: loop different vars each hosts|assert all included_times
+        run_once: true
+        ansible.builtin.assert:
+          that:
+            - included_times | int == (1 + 4)
+
+      - name: loop different vars each hosts|clean facts
+        run_once: true
+        ansible.builtin.set_fact:
+          included_times: 0
+          included_results: []
+
+    - vars:
+        list:
+          - "value1"
+          - "value2@{{ inventory_hostname }}"
+      block:
+      - name: loop different vars once host|include tasks
+        # precedence 'run_once' > 'loop'
+        # 
+        # step1: evaluate once host loop value
+        # host: node1
+        # loop: [ 'value1','value2@node1' ]
+        # run_once: true
+        # -----------------
+        # 
+        # step2: get related hosts based on same value
+        # loop:
+        #   - 'value1': [ node1 ]
+        #   - 'value2@node1': [ node1 ]
+        run_once: true
+        loop: "{{ list }}"
+        include_tasks: some-tasks/ansible-tasks.debug-item.yml
+
+      - name: loop different vars once host|assert included_results
+        run_once: true
+        ansible.builtin.assert:
+          that:
+            - hostvars['node1'].included_results | length == 2
+            - hostvars['node2'].included_results | length == 0
+            - hostvars['node3'].included_results | length == 0
+            - hostvars['node4'].included_results | length == 0
+
+      - name: loop different vars once host|assert all included_times
+        run_once: true
+        ansible.builtin.assert:
+          that:
+            - included_times | int == (1 + 1)
+
+      - name: loop different vars once host|clean facts
+        run_once: true
+        ansible.builtin.set_fact:
+          included_times: 0
+          included_results: []
+
+    - vars:
+        once: "{{ inventory_hostname == 'node2' }}"
+        list:
+          - "value1"
+          - "value2@{{ inventory_hostname }}"
+      block:
+      - name: loop different vars once host2|include tasks
+        # precedence 'run_once' > 'loop'
+        # 
+        # step1: evaluate once host loop value
+        # host: node1
+        # loop: [ 'value1','value2@node1' ]
+        # run_once: false
+        # -----------------
+        # host: node2
+        # loop: [ 'value1','value2@node2' ]
+        # run_once: true
+        # -----------------
+        # step2: get related hosts based on same value
+        # loop:
+        #   - 'value1': [ node1, node2 ]
+        #   - 'value2@node1': [ node1 ]
+        #   - 'value2@node2': [ node2 ]
+        run_once: "{{ once }}"
+        loop: "{{ list }}"
+        include_tasks: some-tasks/ansible-tasks.debug-item.yml
+
+      - name: loop different vars once host2|assert included_results
+        run_once: true
+        ansible.builtin.assert:
+          that:
+            - hostvars['node1'].included_results | length == 2
+            - hostvars['node2'].included_results | length == 2
+            - hostvars['node3'].included_results | length == 0
+            - hostvars['node4'].included_results | length == 0
+
+      - name: loop different vars once host2|assert included_times
+        run_once: true
+        ansible.builtin.assert:
+          that:
+            - included_times | int == (1 + 2)
+
+      - name: loop different vars once host2|clean facts
+        run_once: true
+        ansible.builtin.set_fact:
+          included_times: 0
+          included_results: []
+
+    - vars:
+        once: "{{ inventory_hostname == 'node3' }}"
+        list:
+          - "value1"
+          - "value2@{{ inventory_hostname }}"
+      block:
+      - name: loop different vars once host3|include tasks
+        # precedence 'run_once' > 'loop'
+        # 
+        # step1: evaluate once host loop value
+        # host: node1
+        # loop: [ 'value1','value2@node1' ]
+        # run_once: false
+        # -----------------
+        # host: node2
+        # loop: [ 'value1','value2@node2' ]
+        # run_once: false
+        # -----------------
+        # host: node3
+        # loop: [ 'value1','value2@node3' ]
+        # run_once: true
+        # -----------------
+        # step2: get related hosts based on same value
+        # loop:
+        #   - 'value1': [ node1, node2, node3 ]
+        #   - 'value2@node1': [ node1 ]
+        #   - 'value2@node2': [ node2 ]
+        #   - 'value2@node3': [ node3 ]
+        run_once: "{{ once }}"
+        loop: "{{ list }}"
+        include_tasks: some-tasks/ansible-tasks.debug-item.yml
+
+      - name: loop different vars once host3|assert included_results
+        run_once: true
+        ansible.builtin.assert:
+          that:
+            - hostvars['node1'].included_results | length == 2
+            - hostvars['node2'].included_results | length == 2
+            - hostvars['node3'].included_results | length == 2
+            - hostvars['node4'].included_results | length == 0
+
+      - name: loop different vars once host3|assert included_times
+        run_once: true
+        ansible.builtin.assert:
+          that:
+            - included_times | int == (1 + 3)
+
+      - name: loop different vars once host3|clean facts
+        run_once: true
+        ansible.builtin.set_fact:
+          included_times: 0
+          included_results: []
