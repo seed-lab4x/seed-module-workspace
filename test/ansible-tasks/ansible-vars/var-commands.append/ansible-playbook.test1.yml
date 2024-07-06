@@ -1,0 +1,131 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/localhost/ansible-inventories
+# code: language=ansible
+---
+- name: test
+  hosts: localhost
+  tasks:
+
+  - name: empty param
+    set_fact:
+      _some_param:
+        debug: ''
+        output: ''
+        url: ''
+        link:
+          path: ''
+          target: ''
+
+  # test use static
+  - name: static append|fact param
+    vars:
+      curl_when: "{{ _some_param.url != '' }}"
+      curl_cmd: >
+        curl
+        {{ (_some_param.debug == 'debug') | ternary('-v','') }}
+        {{ (_some_param.output != '') | ternary('-o','') }}
+        {{ (_some_param.output != '') | ternary(_some_param.output,'') }}
+        {{ _some_param.url }}
+
+      before_when: "{{ _some_param.link.target !=''
+          and _some_param.link.path == _some_param.output
+        }}"
+      before_cmd:
+        - mkdir -p {{ _some_param.link.target }}
+        - rm -f {{ _some_param.link.path }}
+        - ln -s -r {{ _some_param.link.target }} {{ _some_param.link.path }}
+
+      after_when: "{{ _some_param.link.path !=''
+          and _some_param.link.target == _some_param.output
+        }}"
+      after_cmd:
+        - rm -f {{ _some_param.link.path }}
+        - ln -s -r {{ _some_param.link.target }} {{ _some_param.link.path }}
+
+      commands:
+        - "{{ before_cmd if (before_when) else '' }}"
+        - "{{ curl_cmd if (curl_when) else '' }}"
+        - "{{ after_cmd if (after_when) else '' }}"
+      auto_commands:
+        commands: "{{ commands | flatten | select() }}"
+    ansible.builtin.set_fact:
+      _some_param: "{{ _some_param | combine(auto_commands, recursive=True) }}"
+
+  - name: static append|assert result
+    ansible.builtin.assert:
+      that:
+        - _some_param.commands | length == 0
+
+  # test use lookup
+  - name: lookup combine|fact param
+    vars:
+      append_before:
+        when: "{{ _some_param.output == _some_param.link.path and _some_param.link.target !='' }}"
+        cmd:
+          - mkdir -p {{ _some_param.link.target }}
+          - rm -f {{ _some_param.link.path }}
+          - ln -s -r {{ _some_param.link.target }} {{ _some_param.link.path }}
+
+      append_core:
+        when: "{{ _some_param.url != '' }}"
+        cmd:
+          - >
+            curl
+            {{ (_some_param.debug == 'debug') | ternary('-v','') }}
+            {{ (_some_param.output != '') | ternary('-o','') }}
+            {{ (_some_param.output != '') | ternary(_some_param.output,'') }}
+            {{ _some_param.url }}
+
+      append_after:
+        when: "{{ _some_param.output == _some_param.link.target and _some_param.link.path !='' }}"
+        cmd:
+          - rm -f {{ _some_param.link.path }}
+          - ln -s -r {{ _some_param.link.target }} {{ _some_param.link.path }}
+      conditional: "{{ lookup('ansible.builtin.vars', name).when }}"
+      item: "{{ lookup('ansible.builtin.vars', name).cmd }}"
+      last: "{{ _some_param.commands | default([],true) }}"
+
+      result: "{{ last + item }}"
+      combine:
+        commands: "{{ result }}"
+    loop:
+      - append_before
+      - append_core
+      - append_after
+    loop_control:
+      loop_var: name
+    when: conditional
+    set_fact:
+      _some_param: "{{ _some_param | combine(combine, recursive=true) }}"
+
+  - name: lookup combine|assert result
+    ansible.builtin.assert:
+      that:
+        - _some_param.commands | length == 0
+
+  # # test use module
+  # - var_cmd:
+  #     append: _some_param.commands
+  #     commands:
+  #       - when:
+  #           - _some_param.url == _some_param.link.path
+  #           - _some_param.link.target !=''
+  #         cmd:
+  #           - mkdir -p {{ _some_param.link.target }}
+  #           - rm -f {{ _some_param.link.path }}
+  #           - ln -s -r {{ _some_param.link.target }} {{ _some_param.link.path }}
+  #       - when: _some_param.url != ''
+  #         cmd:
+  #           - - echo
+  #             - curl
+  #             - when: _some_param.debug == 'debug'
+  #               option: -v
+  #             - when: _some_param.output != ''
+  #               option: -o
+  #               value: "{{ _some_param.output }}"
+  #             - "{{ _some_param.url }}"
+  #       - when:
+  #          - _some_param.url == _some_param.link.target
+  #          - _some_param.link.path !=''
+  #         cmd:
+  #           - rm -f {{ _some_param.link.path }}
+  #           - ln -s -r {{ _some_param.link.target }} {{ _some_param.link.path }}
