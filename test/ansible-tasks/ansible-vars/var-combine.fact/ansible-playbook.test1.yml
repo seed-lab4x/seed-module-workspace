@@ -1,0 +1,160 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/localhost/ansible-inventories
+# code: language=ansible
+---
+- name: test
+  hosts: localhost
+  tasks:
+
+  - name: empty param
+    debug:
+      var: some_param
+
+  # test use static
+  - name: static combine|fact param
+    vars:
+      default:
+        flag: debug
+
+        name: ''
+
+        directory: ''
+
+        link:
+          path: ''
+          target: ''
+      param: "{{ some_param | default({},True) }}"
+      combine_default: "{{ default | combine(param, recursive=True) }}"
+
+      default_directory:
+        directory: "/var/lib/some_path/{{ combine_default.name }}.{{ ansible_date_time.iso8601_basic_short }}Z"
+        link:
+          path: "/var/lib/some_path/{{ combine_default.name }}.latest"
+          target: "/var/lib/some_path/{{ combine_default.name }}.{{ ansible_date_time.iso8601_basic_short }}Z"
+      auto_directory: "{{ (combine_default.directory == '') | ternary(default_directory,{}) }}"
+      combine_directory: "{{ combine_default | combine(auto_directory, recursive=True) }}"
+    ansible.builtin.set_fact:
+      _some_param: "{{ combine_directory }}"
+
+  - name: static combine|assert result
+    ansible.builtin.assert:
+      that:
+        - _some_param.name == ''
+        - _some_param.directory is match("/var/lib/some_path/.*")
+        - _some_param.link.target is match("/var/lib/some_path/.*")
+        - _some_param.link.path == "/var/lib/some_path/.latest"
+
+  # test use loop
+  # NOT WORK loop var eval before use
+  - name: loop combine|fact param
+    vars:
+      default:
+        format: debug
+
+        name: ''
+
+        directory: ''
+
+        link:
+          path: ''
+          target: ''
+      last: "{{ _some_param2 | default(default,true) }}"
+    loop:
+      - when: true
+        var: "{{ some_param | default({},True) }}"
+      - when: "{{ last.directory == '' }}"
+        var:
+          directory: "/var/lib/some_path/{{ last.name }}.{{ ansible_date_time.iso8601_basic_short }}Z"
+          link:
+            path: "/var/lib/some_path/{{ last.name }}.latest"
+            target: "/var/lib/some_path/{{ last.name }}.{{ ansible_date_time.iso8601_basic_short }}Z"
+    when: item.when
+    set_fact:
+      _some_param2: "{{ last | combine(item.var, recursive=true) }}"
+
+  - name: loop combine|assert result
+    ansible.builtin.assert:
+      that:
+        - _some_param2.name == ''
+        - _some_param2.directory is match("/var/lib/influxdb/some_param/.*")
+        - _some_param2.link.target is match("/var/lib/influxdb/some_param/.*")
+        - _some_param2.link.path == "/var/lib/influxdb/some_param/.latest"
+    ignore_errors: true
+
+  # test use lookup
+  - name: lookup combine|fact param
+    vars:
+      comb_default:
+        when: true
+        var:
+          # portable format only support oss 1.5–1.8
+          format: portable
+
+          # empty mean all names
+          name: ''
+
+          # influxdb some_param backup destination
+          directory: ''
+        
+          # link for backup destination
+          link:
+            path: ''
+            target: ''
+
+      comb_param:
+        when: true
+        var: "{{ some_param | default({},True) }}"
+
+      comb_dirlink:
+        when: "{{ last.directory == '' }}"
+        var:
+          directory: "/var/lib/influxdb/some_param/{{ last.name }}.{{ ansible_date_time.iso8601_basic_short }}Z"
+          link:
+            path: "/var/lib/influxdb/some_param/{{ last.name }}.latest"
+            target: "/var/lib/influxdb/some_param/{{ last.name }}.{{ ansible_date_time.iso8601_basic_short }}Z"
+
+      conditional: "{{ lookup('ansible.builtin.vars', name).when }}"
+      item: "{{ lookup('ansible.builtin.vars', name).var }}"
+      last: "{{ _some_param3 | default({},true) }}"
+    loop:
+      - comb_default
+      - comb_param
+      - comb_dirlink
+    loop_control:
+      loop_var: name
+    when: conditional
+    set_fact:
+      _some_param3: "{{ last | combine(item, recursive=true) }}"
+
+  - name: lookup combine|assert result
+    ansible.builtin.assert:
+      that:
+        - _some_param3.name == ''
+        - _some_param3.directory is match("/var/lib/influxdb/some_param/.*")
+        - _some_param3.link.target is match("/var/lib/influxdb/some_param/.*")
+        - _some_param3.link.path == "/var/lib/influxdb/some_param/.latest"
+
+  # TODO test use module
+  # - pipeline_combine:
+  #     register: _some_param
+  #     default:
+  #       # portable format only support oss 1.5–1.8
+  #       format: portable
+
+  #       name: ''
+
+  #       # influxdb some_param backup destination
+  #       directory: ''
+      
+  #       # link for backup destination
+  #       link:
+  #         path: ''
+  #         target: ''
+  #     pipeline:
+  #       - # when: true
+  #         var: "{{ some_param | default({},True) }}"
+  #       - when: combine[1].directory == ''
+  #         var:
+  #           directory: "/var/lib/influxdb/some_param/{{ combine[1].name }}.{{ ansible_date_time.iso8601_basic_short }}Z"
+  #           link:
+  #             path: "/var/lib/influxdb/some_param/{{ _some_param.name }}.latest"
+  #             target: "/var/lib/influxdb/some_param/{{ _some_param.name }}.{{ ansible_date_time.iso8601_basic_short }}Z"
