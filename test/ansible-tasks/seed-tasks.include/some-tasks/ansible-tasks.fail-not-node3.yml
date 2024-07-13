@@ -1,0 +1,8 @@
+# code: language=ansible
+---
+
+- name: ansible-tasks.fail-not-node3|fail not node3
+  when:
+    - inventory_hostname != 'node3' 
+  ansible.builtin.fail:
+    msg: "fail not node3"

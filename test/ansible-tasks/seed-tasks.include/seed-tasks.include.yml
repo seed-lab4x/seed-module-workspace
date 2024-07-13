@@ -1,0 +1,38 @@
+# code: language=ansible
+---
+
+# Recursion maybe, no fact
+- vars:
+    group_name: "{{ flow.group | default('all',true) }}"
+    group_hosts: "{{ groups[group_name] | default([],true) }}"
+    register_result: "{{ flow.register | default('seed_tasks_include_result',true) }}"
+  rescue:
+  - debug: msg="{{ ansible_failed_task }}"
+  - name: seed-tasks.include|rescue|wrong group|fail rescue
+    when:
+      # - inventory_hostname in group_hosts
+      - ansible_failed_task.name != 'seed-tasks.include|assert host in group'
+      # - flow.register not ok
+      - lookup('ansible.builtin.vars', register_result) != 'ok'
+    ansible.builtin.fail:
+      msg: "rescue fail. exclude wrong group. exclude any success."
+
+  block:
+  - name: seed-tasks.include|assert host in group
+    ansible.builtin.assert:
+      that:
+        - inventory_hostname in group_hosts
+      msg: "host not in group {{ group_name }}"
+      quiet: true
+
+  # precedence run_once > when
+  # so, it will appear that the host for run is not in the group.
+  # when: inventory_hostname in group_hosts
+  - name: seed-task.include|include task
+    run_once: "{{ flow.once | default(false) }}"
+    include_tasks: "{{ flow.task }}"
+
+  - name: seed-task.include|fact register
+    run_once: "{{ flow.any | default(false) }}"
+    ansible.builtin.set_fact:
+      "{{ register_result }}": 'ok'
