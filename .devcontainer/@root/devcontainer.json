@@ -1,0 +1,92 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/debian
+{
+	"name": "seed-module-devcontainer",
+
+	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
+	"image": "mcr.microsoft.com/devcontainers/python:3.9",
+
+	// Features to add to the dev container. More info: https://containers.dev/features.
+	"features": {
+		// "ghcr.io/devcontainers/features/python:1": {
+		// 	"version": "3.9.2",
+		// 	"toolsToInstall": "pipx==1.5.0"
+		// },
+		// bug https://github.com/devcontainers-contrib/features/issues/607
+		"ghcr.io/devcontainers-contrib/features/pipx-package:1": {
+			"package": "ansible-core",
+			"version": "2.15.5",
+			"injections": "ansible==8.5.0"
+		},
+		// bug https://github.com/devcontainers-contrib/features/issues/597
+		// "ghcr.io/devcontainers-contrib/features/ansible:2": {
+		// 	"version": "2.15.5"
+		// },
+		"ghcr.io/devcontainers-contrib/features/curl-apt-get:1": {},
+		"ghcr.io/eitsupi/devcontainer-features/jq-likes:2": {
+			"jqVersion": "latest"
+		},
+		"ghcr.io/hspaans/devcontainer-features/sshpass:1": {
+			"installDirectlyFromGitHubRelease": true,
+			"version": "latest"
+		},
+		// "ghcr.io/dlouwers/devcontainer-features/devbox:1": {}
+		"ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
+			"version": "latest"
+		}
+	},
+
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	// "forwardPorts": [],
+
+	// Configure tool-specific properties.
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"dbaeumer.vscode-eslint",
+				"ms-python.autopep8",
+				"ms-python.debugpy",
+				"ms-python.python",
+				"ms-python.vscode-pylance",
+				"redhat.ansible",
+				"redhat.vscode-yaml",
+				"samuelcolvin.jinjahtml",
+				"ms-azuretools.vscode-docker"
+			]
+		}
+	},
+
+	"remoteEnv": {
+		"LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}"
+	},
+
+	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+	/*
+	When run devcontainer with 'root' user on host,
+	`automatically update the container user's UID/GID to match your local user`
+	will not work,
+	see https://code.visualstudio.com/remote/advancedcontainers/add-nonroot-user
+
+	Because host 'root' user UID:0 usually exists in the container, 
+	when build tag '*-uid', it will not change `remoteUser` UID and GID.
+
+	see https://github.com/microsoft/vscode-remote-release/issues/1155#issuecomment-557830602
+	> Not when UID or GID are taken by another user or group in the container.
+
+	*/
+	"remoteUser": "root",
+	// "containerUser": "root",
+
+	"runArgs": [
+		// Fix no access to the Internet
+		// "--network=host",
+
+		"--add-host=host.docker.internal:host-gateway"
+	],
+
+	"postCreateCommand": {
+		"git": "git config --global core.fileMode false && git config --global --add safe.directory '*'",
+		"executable": "bash ${containerWorkspaceFolder}/seed/bash/workspace.executable.sh",
+		"workspace": "ansible-playbook -i ${containerWorkspaceFolder}/config/local@devcontainer/localhost/ansible-inventories ${containerWorkspaceFolder}/seed/ansible-playbook/seed-local.init.yml"
+	}
+}

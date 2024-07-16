@@ -1,0 +1,22 @@
+# code: language=ansible
+
+workspace:
+  package:
+    - sshpass
+    - rsync
+    - git
+    - jq
+    - unzip
+  pip:
+    - jsondiff==2.0.0
+    - jmespath==1.0.1
+    # bug for https://github.com/yaml/pyyaml/issues/724
+    - PyYAML==5.3.1
+    - lxml==4.9.2
+    # bug for https://github.com/docker/docker-py/issues/3113
+    - requests==2.28.1
+    # for seed-ssh.init|config|loop add by fact
+    - paramiko==3.3.1
+    - ansible-pylibssh==1.1.0
+  local: "{{ inventory_dir }}/../../../../"
+  seedpath: seed
