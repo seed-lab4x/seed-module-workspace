@@ -1,0 +1,17 @@
+# code: language=ansible
+
+ssh:
+  # group: ssh
+  name: local-test-2ssh
+  dir: "~/../..{{ hostvars['localhost'].ssh_dir }}/{{ inventory_hostname }}"
+  keyscan_types:
+    # - 'ecdsa-sha2-nistp256'
+    - 'ssh-ed25519'
+    - 'ssh-rsa'
+  approve_task: "{{ playbook_dir }}/../seed-ssh.approve/seed-ssh.test.yml"
+  known_path: "{{ hostvars['localhost'].ssh_dir }}/known_hosts"
+  known_names:
+    - "[{{ ansible_host | default(inventory_hostname,true) }}]:22222"
+    - "[mock_ssh_server]:22222"
+    - "[192.168.86.1]:22222"
+  config_path: "{{ hostvars['localhost'].ssh_dir }}/config"

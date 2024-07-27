@@ -2,15 +2,25 @@
 # code: language=ansible
 ---
 
+- name: seed-ssh.test|fact id
+  run_once: true
+  delegate_to: localhost
+  ansible.builtin.set_fact:
+    _ssh:
+      id: "{{ lookup('community.general.random_string', upper=false, special=false) }}"
+
 - name: seed-ssh.test|fact param
   vars:
     ssh_optional:
       group: 'ssh'
       dir: "~/.ssh"
+      keyscan_types:
+        - ssh-rsa
       approve_task: "seed-ssh.approve.yml"
-      known_hash: true
-      known_scan: []
-      mark_comment: "{{ lookup('community.general.random_string', upper=false, special=false) }}"
+      known_names:
+        - "[{{ hostvars[inventory_hostname].ansible_host | default(inventory_hostname,true) }}]:{{ hostvars[inventory_hostname].ansible_port | default('22',true) }}"
+      known_hash: false
+      mark_comment: "{{ _ssh.id }}"
     ssh_param: "{{ ssh_optional | combine(ssh | default({},true), recursive=True) }}"
 
     parts_keypair_dir:
@@ -20,23 +30,22 @@
       - "{{ ssh.dir | default('~/.ssh',true) }}"
       - "{{ ssh.name }}"
       - "id_rsa"
-    parts_config_path:
-      - "{{ ssh.dir | default('~/.ssh',true) }}"
-      - "config"
     parts_known_path:
       - "{{ ssh.dir | default('~/.ssh',true) }}"
       - "known_hosts"
+    parts_config_path:
+      - "{{ ssh.dir | default('~/.ssh',true) }}"
+      - "config"
     ssh_required:
       name: "{{ ssh.name }}"
       keypair_dir: "{{ parts_keypair_dir | path_join }}"
       keypair_path: "{{ parts_keypair_path | path_join }}"
-      config_path: "{{ ssh.config_path | default(parts_config_path | path_join) }}"
       known_path: "{{ ssh.known_path | default(parts_known_path | path_join) }}"
-  run_once: true
+      config_path: "{{ ssh.config_path | default(parts_config_path | path_join) }}"
   ansible.builtin.set_fact:
     _ssh: "{{ ssh_param | combine(ssh_required, recursive=True) }}"
 
-- run_once: true
+- throttle: 1
   delegate_to: localhost
   block:
   - name: seed-ssh.test|keypair|mkdir
@@ -55,7 +64,26 @@
     register: ssh_keypair
     until: ssh_keypair is succeeded
 
+- name: seed-ssh.test|keyscan|fact scan key
+  delegate_to: localhost
+  vars:
+    item_keyscan_port: "{{ hostvars[inventory_hostname].ansible_port | default('22',true) }}"
+    item_keyscan_host: "{{ hostvars[inventory_hostname].ansible_host | default(inventory_hostname,true) }}"
+    item_keyscan_command: "ssh-keyscan -t {{ item_keyscan_type }} -p {{ item_keyscan_port }} {{ item_keyscan_host }}"
+    item_keyscan_key: "{{ lookup('pipe', item_keyscan_command, errors='ignore') }}"
+  loop: "{{ _ssh.keyscan_types }}"
+  loop_control:
+    loop_var: item_keyscan_type
+  when:
+    - item_keyscan_key | default(None,true) != None
+  ansible.builtin.set_fact:
+    ssh_keyscan: "{{ ssh_keyscan | default([],true) + [item_keyscan_key] }}"
+
+- when: _ssh.known_path | default(None,true) != None
+  block:
   - name: seed-ssh.test|known_hosts|mark start
+    run_once: true
+    delegate_to: localhost
     ansible.builtin.lineinfile:
       path: "{{ _ssh.known_path }}"
       line:  |-
@@ -63,35 +91,35 @@
         # seed-ssh.test '{{ _ssh.name }}' {{ _ssh.mark_comment }} start
       create: true
 
-  - name: seed-ssh.test|known_hosts|loop add by keyscan
+  - name: seed-ssh.test|known_hosts|add key
+    throttle: 1
+    delegate_to: localhost
     vars:
-      list_host_scan: "{{ groups[_ssh.group]
-          | product(_ssh.known_scan)
-          | map('zip', ['name', 'type'])
+      list_known_host: "{{ _ssh.known_names
+          | product(ssh_keyscan)
+          | map('zip', ['name', 'key'])
           | map('map', 'reverse')
           | map('community.general.dict') }}"
-      item_host_name: "{{ item_host_scan.name }}"
-      item_keyscan_type: "{{ item_host_scan.type }}"
-      item_keyscan_port: "{{ hostvars[item_host_name].ansible_port | default('22',true) }}"
-      item_keyscan_host: "{{ hostvars[item_host_name].ansible_host | default(item_host_name,true) }}"
-      item_known_name: "{{ item_keyscan_host }}"
-      item_keyscan_command: "ssh-keyscan -t {{ item_keyscan_type }} -p {{ item_keyscan_port }} {{ item_keyscan_host }}"
-      name: "{{ item.value.inventory_hostname }}"
-      item_key: "{{ lookup('pipe', item_keyscan_command, errors='ignore') }}"
-    loop: "{{ list_host_scan }}"
+      item_known_namedkey: "{{ ([item_known_host.name] + item_known_host.key.split(' ')[1:]) | join(' ') }}"
+    loop: "{{ list_known_host }}"
     loop_control:
-      loop_var: item_host_scan
-    when:
-      - item_key | default(None,true) != None
+      loop_var: item_known_host
     ansible.builtin.known_hosts:
       state: present
       path: "{{ _ssh.known_path }}"
       hash_host: "{{ _ssh.known_hash }}"
-      name: "{{ item_known_name }}"
-      key: "{{ item_key }}"
-    register: ssh_known
-    until: ssh_known is succeeded
-    ignore_errors: yes
+      name: "{{ item_known_host.name }}"
+      key: "{{ item_known_host.key if(item_known_host.key.split(' ')[0] == item_known_host.name) else item_known_namedkey }}"
+
+  - name: seed-ssh.test|known_hosts|mark end
+    run_once: true
+    delegate_to: localhost
+    ansible.builtin.lineinfile:
+      path: "{{ _ssh.known_path }}"
+      line:  |-
+        # seed-ssh.test '{{ _ssh.name }}' {{ _ssh.mark_comment }} end
+
+      create: true
 
 - block:
   - name: seed-ssh.test|approve|include tasks
@@ -99,19 +127,11 @@
     vars:
       ssh: "{{ _ssh }}"
 
-- run_once: true
-  delegate_to: localhost
-  when: _ssh.config_path | default(None,true) != None
+- when: _ssh.config_path | default(None,true) != None
   block:
-  - name: seed-ssh.test|known_hosts|mark end
+  - name: seed-ssh.test|config|mark start
     run_once: true
     delegate_to: localhost
-    ansible.builtin.lineinfile:
-      path: "~/.ssh/known_hosts"
-      line: "# seed-ssh.test '{{ _ssh.name }}' {{ _ssh.mark_comment }} end"
-      create: true
-
-  - name: seed-ssh.test|config|mark start
     ansible.builtin.lineinfile:
       path: "{{ _ssh.config_path }}"
       line: |-
@@ -119,28 +139,55 @@
         # seed-ssh.test '{{ _ssh.name }}' {{ _ssh.mark_comment }} start
       create: true
 
-  - name: seed-ssh.test|config|loop add by fact
+  - name: seed-ssh.test|config|delete config
+    throttle: 1
+    delegate_to: localhost
     vars:
-      item_host: "{{ hostvars[host_name].ansible_host | default(host_name,true) }}"
-      item_port: "{{ hostvars[host_name].ansible_port | default('',true) }}"
-      item_user: "{{ hostvars[host_name].ansible_user | default('root',true) }}"
-    loop: "{{ groups[_ssh.group] }}"
-    loop_control:
-      loop_var: host_name
+      config_host: "{{ inventory_hostname }}.{{ ansible_host }}"
+      config_hostname: "{{ ansible_host | default(inventory_hostname,true) }}"
+    community.general.ssh_config:
+      state: absent
+      ssh_config_file: "{{ _ssh.config_path }}"
+      host: "{{ config_hostname if(config_hostname == inventory_hostname) else config_host }}"
+    ignore_errors: yes
+
+  - name: seed-ssh.test|config|add config
+    throttle: 1
+    delegate_to: localhost
+    vars:
+      config_host: "{{ inventory_hostname }}.{{ ansible_host }}"
+      config_hostname: "{{ ansible_host | default(inventory_hostname,true) }}"
+      config_port: "{{ ansible_port | default('',true) }}"
+      config_user: "{{ ansible_user | default('root',true) }}"
     community.general.ssh_config:
       state: present
       ssh_config_file: "{{ _ssh.config_path }}"
-      host: "{{ item_host }}"
-      hostname: "{{ item_host }}"
-      port: "{{ item_port | default(omit,true) }}"
-      remote_user: "{{ item_user | default(omit,true) }}"
+      host: "{{ config_hostname if(config_hostname == inventory_hostname) else config_host }}"
+      hostname: "{{ config_hostname }}"
+      port: "{{ config_port | default(omit,true) }}"
+      remote_user: "{{ config_user | default(omit,true) }}"
       identity_file: "{{ _ssh.keypair_path }}"
     ignore_errors: yes
 
+  # replace path for support `~`
+  - name: seed-ssh.test|config|replace home path
+    throttle: 1
+    delegate_to: localhost
+    when: _ssh.keypair_path.startswith('~')
+    ansible.builtin.replace:
+      path: "{{ _ssh.config_path }}"
+      after: "# seed-ssh.test '{{ _ssh.name }}' {{ _ssh.mark_comment }} start"
+      regexp: "{{ ssh_keypair.filename }}"
+      replace: "{{ _ssh.keypair_path }}"
+
   - name: seed-ssh.test|config|mark end
+    run_once: true
+    delegate_to: localhost
     ansible.builtin.lineinfile:
       path: "{{ _ssh.config_path }}"
-      line: "# seed-ssh.test '{{ _ssh.name }}' {{ _ssh.mark_comment }} end"
+      line: |-
+        # seed-ssh.test '{{ _ssh.name }}' {{ _ssh.mark_comment }} end
+
       create: true
 
 - name: seed-ssh.test|unfact param

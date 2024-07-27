@@ -14,11 +14,15 @@ ansible-playbook -vvv -e ansible_password=seed -i $inventory_path $source_direct
 
 
 # 1
+ansible-playbook -vvv -e ansible_password=seed -i $inventory_path $source_directory/ansible-playbook.test1.yml
+
+
+# 2
 pkill ssh
 sleep 2
 ansible-playbook -vvv -i $inventory_path --extra-vars "mode=failed" $source_directory/ansible-playbook.ping.yml
 
-ansible-playbook -vvv -e ansible_password=seed -i $inventory_path $source_directory/ansible-playbook.test1.yml
+ansible-playbook -vvv -e ansible_password=seed -i $inventory_path $source_directory/ansible-playbook.test2.yml
 
 pkill ssh
 sleep 2

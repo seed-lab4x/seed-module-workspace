@@ -8,7 +8,7 @@
   tasks:
 
     - name: clean|clean ssh-server
-      loop: "{{ groups['ssh'] }}"
+      loop: "{{ groups['mock_ssh_server'] }}"
       loop_control:
         loop_var: host_name
       community.docker.docker_container:

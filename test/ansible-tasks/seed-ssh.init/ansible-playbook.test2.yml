@@ -1,0 +1,31 @@
+#!/usr/bin/env -vS ansible-playbook -vvv -e ansible_password=seed -i ${PWD}/../../test@local/2ssh/ansible-inventories
+# code: language=ansible
+---
+
+- name: test|local
+  hosts: localhost
+  connection: local
+  tasks:
+
+    - name: 2|fact ssh_dir
+      ansible.builtin.set_fact:
+        ssh_dir: "{{ ssh_dir }}"
+
+- name: test|remote
+  vars:
+    ansible_ssh_extra_args: '-o StrictHostKeyChecking=no'
+  hosts: "{{ ssh.group | default('ssh',true) }}"
+  gather_facts: false
+  tasks:
+
+    # test use real ssh home
+    - name: 2|init ssh
+      include_tasks: seed-ssh.test.yml
+      vars:
+        ssh:
+          # group: ssh
+          name: "test-ssh-init-2"
+          dir: "{{ hostvars['localhost'].ssh_dir }}"
+          approve_task: "{{ playbook_dir }}/../seed-ssh.approve/seed-ssh.test.yml"
+          known_path: "~/.ssh/known_hosts"
+          config_path: "~/.ssh/config"

@@ -1,4 +1,4 @@
-#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/2ssh/ansible-inventories
+#!/usr/bin/env -vS ansible-playbook -vvv -i ${PWD}/../../test@local/2ssh/ansible-inventories --extra-vars "mode=succeeded"
 # code: language=ansible
 ---
 
@@ -7,9 +7,9 @@
   connection: local
   tasks:
 
-    - name: ping ssh
+    - name: ping mock_ssh_server
       ansible.builtin.shell:
-        cmd: "ansible -i {{ inventory_dir }} ssh -m ping"
+        cmd: "ansible -i {{ inventory_dir }} mock_ssh_server -m ping"
       async: 5
       poll: 1
       register: server_ping

@@ -28,7 +28,7 @@
         dest: "{{ playbook_dir }}/build/known_hosts.bak"
 
     - name: init|add ssh-server
-      loop: "{{ groups['ssh'] }}"
+      loop: "{{ groups['mock_ssh_server'] }}"
       loop_control:
         loop_var: host_name
       community.docker.docker_container:
@@ -46,9 +46,10 @@
       until: server_add is succeeded
 
     - name: init|apk ssh-server
-      loop: "{{ groups['ssh'] }}"
+      loop: "{{ groups['mock_ssh_server'] }}"
       loop_control:
         loop_var: host_name
+      when: alpine_command | default(None,true) != None
       community.docker.docker_container_exec:
         container: "test-ssh-init-{{ host_name }}"
         command: "{{ alpine_command }}"
@@ -56,7 +57,7 @@
       until: server_apk is succeeded
 
     - name: init|python ssh-server
-      loop: "{{ groups['ssh'] }}"
+      loop: "{{ groups['mock_ssh_server'] }}"
       loop_control:
         loop_var: host_name
       community.docker.docker_container_exec:

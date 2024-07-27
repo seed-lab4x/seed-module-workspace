@@ -16,17 +16,6 @@
         state: directory
         path: "{{ playbook_dir }}/build/test-ssh-init-0"
 
-    - name: 0|backup config
-      ansible.builtin.copy:
-        src: "~/.ssh/config"
-        dest: "{{ playbook_dir }}/build/test-ssh-init-0/config.bak"
-      register: config_backup
-
-    - name: 0|backup known_hosts
-      ansible.builtin.copy:
-        src: "~/.ssh/known_hosts"
-        dest: "{{ playbook_dir }}/build/test-ssh-init-0/nown_hosts.bak"
-      register: known_backup
 
 - name: test|remote
   vars:
@@ -35,6 +24,7 @@
   gather_facts: false
   tasks:
 
+    # test use vars
     - name: 0|init ssh
       include_tasks: seed-ssh.test.yml
       vars:
@@ -42,14 +32,16 @@
           # group: ssh
           name: "test-ssh-init-0"
           dir: "{{ hostvars['localhost'].ssh_dir }}"
-          approve_task: "{{ playbook_dir }}/../seed-ssh.approve/seed-ssh.test.yml"
-          config_path: "{{ playbook_dir }}/build/test-ssh-init-0/config"
-          known_path: "{{ playbook_dir }}/build/test-ssh-init-0/known_hosts"
-          known_hash: true
-          known_scan:
+          keyscan_types:
             - 'ecdsa-sha2-nistp256'
             - 'ssh-ed25519'
             - 'ssh-rsa'
+          approve_task: "{{ playbook_dir }}/../seed-ssh.approve/seed-ssh.test.yml"
+          known_path: "{{ playbook_dir }}/build/test-ssh-init-0/known_hosts"
+          # known_names:
+          #   - "[{{ hostvars[inventory_hostname].ansible_host | default(inventory_hostname,true) }}]:{{ hostvars[inventory_hostname].ansible_port | default('22',true) }}"
+          # known_hash: false
+          config_path: "{{ playbook_dir }}/build/test-ssh-init-0/config"
 
 
 - name: test|local
@@ -66,12 +58,30 @@
       register: keypair_stat
       until: keypair_stat.stat.exists
 
+    - name: 0|read known
+      ansible.builtin.shell:
+        cmd: "cat {{ playbook_dir }}/build/test-ssh-init-0/known_hosts"
+      register: known_content
+
+    - name: 0|match known
+      ansible.builtin.assert:
+        that:
+          - known_content.stdout.find('[host.docker.internal]:22221') != -1
+          - known_content.stdout.find('[host.docker.internal]:22222') != -1
+      register: known_match
+      failed_when: known_match is changed
+
     - name: 0|match config
       loop:
-        - 'Host localhost'
-        - '    hostname localhost'
+        - 'Host node1.host.docker.internal'
+        - '    hostname host.docker.internal'
+        - '    port 22221'
+        - "    identityfile {{ ssh_dir }}/test-ssh-init-0/id_rsa"
+        - '    user seed'
+        - 'Host node2.host.docker.internal'
+        - '    hostname host.docker.internal'
         - '    port 22222'
-        - "    identityfile {{ ssh_dir | realpath }}/test-ssh-init-0/id_rsa"
+        - "    identityfile {{ ssh_dir }}/test-ssh-init-0/id_rsa"
         - '    user seed'
       ansible.builtin.lineinfile:
         path: "{{ playbook_dir }}/build/test-ssh-init-0/config"
@@ -82,7 +92,7 @@
       failed_when: config_match is changed
 
     - name: 0|authorized results
-      loop: "{{ groups['ssh'] }}"
+      loop: "{{ groups['mock_ssh_server'] }}"
       loop_control:
         loop_var: host_name
       community.docker.docker_container_exec:
@@ -105,17 +115,10 @@
   connection: local
   tasks:
 
-    - name: 0|restore known_hosts
-      ansible.builtin.copy:
-        src: "{{ known_backup.dest }}"
-        dest: "~/.ssh/known_hosts"
-
-    - name: 0|restore config
-      ansible.builtin.copy:
-        src: "{{ config_backup.dest }}"
-        dest: "~/.ssh/config"
-
     - name: 0|clean build
+      loop:
+        - "{{ playbook_dir }}/build/test-ssh-init-0"
+        - "{{ hostvars['localhost'].ssh_dir }}"
       ansible.builtin.file:
         state: absent
-        path: "{{ playbook_dir }}/build/test-ssh-init-0"
+        path: "{{ item }}"

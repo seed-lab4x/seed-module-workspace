@@ -7,7 +7,7 @@
   connection: local
   tasks:
 
-    - name: 0|fact ssh_dir
+    - name: 1|fact ssh_dir
       ansible.builtin.set_fact:
         ssh_dir: "{{ ssh_dir }}"
 
@@ -15,16 +15,113 @@
   vars:
     ansible_ssh_extra_args: '-o StrictHostKeyChecking=no'
   hosts: "{{ ssh.group | default('ssh',true) }}"
-  gather_facts: false
+  gather_facts: true
   tasks:
 
+    # test use inventory host vars
     - name: 1|init ssh
       include_tasks: seed-ssh.test.yml
+      # vars:
+      #   ssh:
+      #     # group: ssh
+      #     name: "local-test-2ssh"
+      #     dir: "~/../..{{ hostvars['localhost'].ssh_dir }}"
+      #     keyscan_types:
+      #       - 'ecdsa-sha2-nistp256'
+      #       - 'ssh-ed25519'
+      #       - 'ssh-rsa'
+      #     approve_task: "{{ playbook_dir }}/../seed-ssh.approve/seed-ssh.test.yml"
+      #     known_path: "{{ hostvars['localhost'].ssh_dir }}/known_hosts"
+      #     config_path: "{{ hostvars['localhost'].ssh_dir }}/config"
+
+
+- name: test|local
+  hosts: localhost
+  connection: local
+  tasks:
+
+    - name: 1|exists keypair
+      loop:
+        - "{{ ssh_dir }}/local-test-2ssh/id_rsa"
+        - "{{ ssh_dir }}/local-test-2ssh/id_rsa.pub"
+        - "{{ ssh_dir }}/node1/local-test-2ssh/id_rsa"
+        - "{{ ssh_dir }}/node1/local-test-2ssh/id_rsa.pub"
+        - "{{ ssh_dir }}/node2/local-test-2ssh/id_rsa"
+        - "{{ ssh_dir }}/node2/local-test-2ssh/id_rsa.pub"
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: keypair_stat
+      until: keypair_stat.stat.exists
+
+    - name: 1|read known
+      ansible.builtin.shell:
+        cmd: "cat {{ ssh_dir }}/known_hosts"
+      register: known_content
+
+    - name: 1|match known
+      ansible.builtin.assert:
+        that:
+          - known_content.stdout.find('[node1.host.docker.internal]:22221') != -1
+          - known_content.stdout.find('[node2.host.docker.internal]:222223') != -1
+          - known_content.stdout.find('[host.docker.internal]:22222') != -1
+      register: known_match
+      failed_when: known_match is changed
+
+    - name: 1|match config
+      loop:
+        - 'Host node1.host.docker.internal'
+        - '    hostname host.docker.internal'
+        - '    port 22221'
+        - "    identityfile ~/../..{{ ssh_dir }}/node1/local-test-2ssh/id_rsa"
+        - '    user seed'
+        - 'Host node2.host.docker.internal'
+        - '    hostname host.docker.internal'
+        - '    port 22222'
+        - "    identityfile ~/../..{{ ssh_dir }}/node2/local-test-2ssh/id_rsa"
+        - '    user seed'
+        - 'Host host.docker.internal'
+        - '    hostname host.docker.internal'
+        - '    port 22221'
+        - "    identityfile ~/../..{{ ssh_dir }}/local-test-2ssh/id_rsa"
+        - '    user seed'
+      ansible.builtin.lineinfile:
+        path: "{{ ssh_dir }}/config"
+        line: "{{ item }}"
+        state: present
+      check_mode: yes
+      register: config_match
+      failed_when: config_match is changed
+
+    - name: 1|authorized results
+      loop: "{{ groups['mock_ssh_server'] }}"
+      loop_control:
+        loop_var: host_name
+      community.docker.docker_container_exec:
+        container: "test-ssh-init-{{ host_name }}"
+        command: "cat /config/.ssh/authorized_keys"
+      register: key_authorized
+
+    - name: 1|assert results
       vars:
-        ssh:
-          # group: ssh
-          name: "test-ssh-init-1"
-          dir: "{{ hostvars['localhost'].ssh_dir }}"
-          config_path: "~/.ssh/config"
-          known_path: "~/.ssh/known_hosts"
-          approve_task: "{{ playbook_dir }}/../seed-ssh.approve/seed-ssh.test.yml"
+        pub_path0: "{{ ssh_dir }}/node1/local-test-2ssh/id_rsa.pub"
+        pub_content0: "{{ lookup('file', pub_path0) }}"
+        pub_path1: "{{ ssh_dir }}/node2/local-test-2ssh/id_rsa.pub"
+        pub_content1: "{{ lookup('file', pub_path1) }}"
+      ansible.builtin.assert:
+        that:
+          - key_authorized.results[0].stdout_lines | map('trim') is contains(pub_content0)
+          - key_authorized.results[1].stdout_lines | map('trim') is contains(pub_content1)
+
+
+- name: test|local
+  hosts: localhost
+  connection: local
+  tasks:
+
+    - name: 1|clean build
+      loop:
+        - "{{ ssh_dir }}"
+      ansible.builtin.file:
+        state: absent
+        path: "{{ item }}"
+
