@@ -36,8 +36,11 @@ then
         --remove-existing-container \
         --config $workspace_path/.devcontainer/@root/devcontainer.json \
         --mount type=bind,source=/root/.ssh,target=/root/.ssh \
+        --mount type=bind,source=/root/.seed,target=/root/.seed \
         "$@"
 else
+    # seed workspace.remote support in devcontainer
+    mkdir -p /home/vscode/.seed
     # up devcontainer
     # mount current user ssh path
     # update container user(vscode)'s UID/GID to match your current user
@@ -46,6 +49,7 @@ else
         --remove-existing-container \
         --config $workspace_path/.devcontainer/devcontainer.json \
         --mount type=bind,source=$HOME/.ssh,target=/home/vscode/.ssh \
+        --mount type=bind,source=/home/vscode/.seed,target=/home/vscode/.seed \
         --update-remote-user-uid-default on \
         "$@"
 fi
